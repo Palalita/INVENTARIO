@@ -75,12 +75,25 @@ automatización) hasta completarlo sin errores de consola.
 Documentadas explícitamente para que quede claro qué falta, no se descubrió tarde:
 - **No hay UI de gestión de usuarios** (`/usuarios`, solo admin). El backend ya
   expone `GET/POST/PATCH /users` completos y probados; falta la pantalla.
-- **No hay UI para crear/editar categorías** (solo se pueden filtrar las 3 del
-  seed). El backend ya expone `POST/PATCH/DELETE /categories`; falta la pantalla.
 - **No hay botón de exportar CSV** del reporte de ventas en el dashboard, aunque
   el backend soporta `GET /dashboard/sales-report?format=csv`.
 - Confirmaciones de fecha en filtros de facturas usan `<input type="date">` nativo
   en vez de un date-picker con calendario.
 
-Recomendación: estas 3 pantallas faltantes son trabajo de front-end acotado (la API
+Recomendación: estas pantallas faltantes son trabajo de front-end acotado (la API
 ya existe y está probada) — buen primer follow-up post-lanzamiento.
+
+## Actualización 2026-09-16 (post-lanzamiento inicial)
+- **Gestión de categorías agregada**: diálogo "Categorías" en `/productos` (solo
+  admin) con crear/renombrar/eliminar, usando `POST/PATCH/DELETE /categories` que
+  ya existían en el backend. Verificado end-to-end en navegador (crear, renombrar,
+  eliminar con confirmación, y reflejo inmediato en el selector de categoría del
+  formulario de producto y en el filtro del listado).
+- **Bug de UI corregido**: los 4 `Select` del proyecto (filtro de categoría,
+  categoría del formulario de producto, estado de factura, tipo de movimiento de
+  stock) mostraban el `value` interno crudo (UUID de categoría, o un sentinel
+  interno) en vez de la etiqueta legible — `SelectValue` de Base UI necesita un
+  render-prop explícito para resolver el label. Corregido en los 4 puntos.
+- **Bug de UI corregido**: `Button` con `render={<Link/>}` (navegación como
+  enlace) generaba una advertencia de Base UI por no declarar `nativeButton={false}`;
+  corregido en "Nueva factura" y "Ver factura".

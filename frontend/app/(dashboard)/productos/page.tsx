@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { PaginationBar } from "@/components/common/pagination-bar";
 import { ProductTable } from "@/components/products/product-table";
 import { ProductFormDialog } from "@/components/products/product-form-dialog";
+import { CategoryManagerDialog } from "@/components/products/category-manager-dialog";
 import { useCategories } from "@/lib/hooks/use-categories";
 import { useProducts } from "@/lib/hooks/use-products";
 import { useAuthStore } from "@/lib/stores/auth-store";
@@ -50,7 +51,12 @@ export default function ProductosPage() {
           <h1 className="text-2xl font-semibold tracking-tight">Productos</h1>
           <p className="text-sm text-muted-foreground">Catálogo e inventario</p>
         </div>
-        {isAdmin && <ProductFormDialog />}
+        {isAdmin && (
+          <div className="flex gap-2">
+            <CategoryManagerDialog />
+            <ProductFormDialog />
+          </div>
+        )}
       </div>
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
