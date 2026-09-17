@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
   Boxes,
+  ChevronDown,
   LayoutDashboard,
   LogOut,
   Menu,
@@ -15,6 +16,16 @@ import {
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { logout as apiLogout } from "@/lib/api";
 import { useAuthStore } from "@/lib/stores/auth-store";
@@ -54,12 +65,30 @@ function NavLinks({ pathname, onNavigate }: { pathname: string; onNavigate?: () 
   );
 }
 
+function getCurrentNavItem(pathname: string) {
+  return (
+    NAV_ITEMS.find((item) => pathname === item.href || pathname.startsWith(`${item.href}/`)) ??
+    NAV_ITEMS[0]
+  );
+}
+
+function initials(name: string) {
+  return name
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase())
+    .join("");
+}
+
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const user = useAuthStore((state) => state.user);
   const clearSession = useAuthStore((state) => state.clearSession);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const currentNavItem = getCurrentNavItem(pathname);
+  const CurrentIcon = currentNavItem.icon;
 
   async function handleLogout() {
     await apiLogout();
@@ -102,11 +131,42 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </SheetContent>
           </Sheet>
 
+          <div className="flex items-center gap-2 font-medium">
+            <CurrentIcon className="size-4 text-primary" />
+            {currentNavItem.label}
+          </div>
+
           <div className="flex-1" />
           <ThemeToggle />
-          <Button variant="ghost" size="icon" aria-label="Cerrar sesión" onClick={handleLogout}>
-            <LogOut className="size-4" />
-          </Button>
+
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              render={
+                <Button variant="ghost" className="gap-2 px-2">
+                  <Avatar size="sm">
+                    <AvatarFallback>{user ? initials(user.name) : "?"}</AvatarFallback>
+                  </Avatar>
+                  <span className="hidden max-w-32 truncate sm:inline">{user?.name}</span>
+                  <ChevronDown className="size-3.5 text-muted-foreground" />
+                </Button>
+              }
+            />
+            <DropdownMenuContent align="end">
+              <DropdownMenuGroup>
+                <DropdownMenuLabel>
+                  <p className="truncate font-medium text-foreground">{user?.name}</p>
+                  <p className="truncate text-xs font-normal text-muted-foreground">
+                    {user?.role === "ADMIN" ? "Administrador" : "Vendedor"} · {user?.email}
+                  </p>
+                </DropdownMenuLabel>
+              </DropdownMenuGroup>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={handleLogout}>
+                <LogOut className="size-4" />
+                Cerrar sesión
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </header>
 
         <main className="flex-1 p-4 md:p-6">{children}</main>

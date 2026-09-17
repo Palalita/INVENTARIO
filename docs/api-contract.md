@@ -34,7 +34,7 @@ Todas las respuestas paginadas: `{ "data": [...], "page": number, "pageSize": nu
 ## Clients
 - `GET /clients?search=&page=`
 - `GET /clients/:id`
-- `POST /clients` `{ name, documentId?, email?, phone?, address? }`
+- `POST /clients` `{ name, nit?, email?, phone?, address? }`
 - `PATCH /clients/:id`
 - `DELETE /clients/:id` (admin)
 

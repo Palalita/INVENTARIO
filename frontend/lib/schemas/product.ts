@@ -6,7 +6,6 @@ export const productSchema = z.object({
   description: z.string().max(500).optional().or(z.literal("")),
   categoryId: z.string().optional().or(z.literal("")),
   price: z.coerce.number({ message: "Precio inválido" }).nonnegative("Debe ser mayor o igual a 0"),
-  cost: z.coerce.number({ message: "Costo inválido" }).nonnegative("Debe ser mayor o igual a 0"),
   stock: z.coerce.number({ message: "Stock inválido" }).int("Debe ser un número entero").min(0),
   minStock: z.coerce
     .number({ message: "Stock mínimo inválido" })

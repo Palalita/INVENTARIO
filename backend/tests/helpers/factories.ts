@@ -55,11 +55,11 @@ export async function createProduct(
   });
 }
 
-export async function createClient(overrides: Partial<{ name: string; documentId: string }> = {}) {
+export async function createClient(overrides: Partial<{ name: string; nit: string }> = {}) {
   return prisma.client.create({
     data: {
       name: overrides.name ?? "Cliente de prueba",
-      documentId: overrides.documentId ?? `DOC-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`
+      nit: overrides.nit ?? `NIT-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`
     }
   });
 }

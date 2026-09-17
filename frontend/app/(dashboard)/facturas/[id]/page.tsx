@@ -97,8 +97,8 @@ export default function FacturaDetallePage() {
             {invoice.client?.name ?? "—"}
           </p>
           <p>
-            <span className="text-muted-foreground">Documento: </span>
-            {invoice.client?.documentId ?? "—"}
+            <span className="text-muted-foreground">NIT: </span>
+            {invoice.client?.nit ?? "—"}
           </p>
           <p>
             <span className="text-muted-foreground">Correo: </span>

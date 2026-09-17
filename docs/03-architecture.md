@@ -136,7 +136,7 @@ model StockMovement {
 model Client {
   id         String    @id @default(uuid())
   name       String
-  documentId String?   @unique
+  nit        String?   @unique
   email      String?
   phone      String?
   address    String?

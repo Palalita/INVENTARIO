@@ -50,7 +50,7 @@ export interface StockMovement {
 export interface Client {
   id: string;
   name: string;
-  documentId?: string | null;
+  nit?: string | null;
   email?: string | null;
   phone?: string | null;
   address?: string | null;
@@ -137,7 +137,6 @@ export interface CreateProductPayload {
   description?: string;
   categoryId?: string | null;
   price: number;
-  cost: number;
   stock: number;
   minStock: number;
 }
@@ -154,7 +153,7 @@ export interface CreateStockMovementPayload {
 
 export interface CreateClientPayload {
   name: string;
-  documentId?: string;
+  nit?: string;
   email?: string;
   phone?: string;
   address?: string;

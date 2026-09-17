@@ -8,7 +8,7 @@ export const listClientsQuerySchema = z.object({
 
 export const createClientSchema = z.object({
   name: z.string().min(1, "El nombre es requerido"),
-  documentId: z.string().optional(),
+  nit: z.string().optional(),
   email: z.string().email().optional(),
   phone: z.string().optional(),
   address: z.string().optional()
@@ -16,7 +16,7 @@ export const createClientSchema = z.object({
 
 export const updateClientSchema = z.object({
   name: z.string().min(1).optional(),
-  documentId: z.string().optional().nullable(),
+  nit: z.string().optional().nullable(),
   email: z.string().email().optional().nullable(),
   phone: z.string().optional().nullable(),
   address: z.string().optional().nullable()

@@ -11,7 +11,7 @@ export async function listClients(query: ListClientsQuery) {
     ? {
         OR: [
           { name: { contains: query.search, mode: "insensitive" } },
-          { documentId: { contains: query.search, mode: "insensitive" } },
+          { nit: { contains: query.search, mode: "insensitive" } },
           { email: { contains: query.search, mode: "insensitive" } }
         ]
       }
@@ -34,10 +34,10 @@ export async function getClientById(id: string) {
 }
 
 export async function createClient(input: CreateClientInput) {
-  if (input.documentId) {
-    const existing = await prisma.client.findUnique({ where: { documentId: input.documentId } });
+  if (input.nit) {
+    const existing = await prisma.client.findUnique({ where: { nit: input.nit } });
     if (existing) {
-      throw AppError.conflict("Ya existe un cliente con ese documento", "DUPLICATE_DOCUMENT");
+      throw AppError.conflict("Ya existe un cliente con ese NIT", "DUPLICATE_NIT");
     }
   }
   return prisma.client.create({ data: input });

@@ -74,11 +74,11 @@ async function main() {
   }
 
   const client = await prisma.client.upsert({
-    where: { documentId: "CF-0001" },
+    where: { nit: "CF-0001" },
     update: {},
     create: {
       name: "Consumidor Final",
-      documentId: "CF-0001",
+      nit: "CF-0001",
       email: "cliente@example.com",
       phone: "00000000",
       address: "Ciudad de Guatemala"

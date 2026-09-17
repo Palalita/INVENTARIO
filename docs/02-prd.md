@@ -57,7 +57,7 @@ User, Category, Product, StockMovement, Client, Invoice, InvoiceItem, RefreshTok
 - Búsqueda y filtro por nombre/sku/categoría, con paginación.
 
 ### 5.3 Clientes
-- CRUD de clientes (nombre, documento, email, teléfono, dirección).
+- CRUD de clientes (nombre, NIT, email, teléfono, dirección).
 
 ### 5.4 Facturación
 - Crear factura: selecciona cliente + líneas de producto/cantidad.

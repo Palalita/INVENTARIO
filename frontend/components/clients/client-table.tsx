@@ -52,7 +52,7 @@ export function ClientTable({ clients, isLoading, isError, onRetry, isAdmin }: C
         <TableHeader>
           <TableRow>
             <TableHead>Nombre</TableHead>
-            <TableHead>Documento</TableHead>
+            <TableHead>NIT</TableHead>
             <TableHead>Correo</TableHead>
             <TableHead>Teléfono</TableHead>
             <TableHead className="w-1 text-right">Acciones</TableHead>
@@ -83,7 +83,7 @@ export function ClientTable({ clients, isLoading, isError, onRetry, isAdmin }: C
               <TableRow key={client.id}>
                 <TableCell className="font-medium">{client.name}</TableCell>
                 <TableCell className="text-sm text-muted-foreground">
-                  {client.documentId ?? "—"}
+                  {client.nit ?? "—"}
                 </TableCell>
                 <TableCell className="text-sm text-muted-foreground">{client.email ?? "—"}</TableCell>
                 <TableCell className="text-sm text-muted-foreground">{client.phone ?? "—"}</TableCell>

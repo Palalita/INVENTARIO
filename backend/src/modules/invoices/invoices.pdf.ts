@@ -9,7 +9,7 @@ interface InvoiceForPdf {
   subtotal: Prisma.Decimal;
   tax: Prisma.Decimal;
   total: Prisma.Decimal;
-  client: { name: string; documentId: string | null; email: string | null; phone: string | null };
+  client: { name: string; nit: string | null; email: string | null; phone: string | null };
   user: { name: string; email: string };
   items: Array<{
     quantity: number;
@@ -35,7 +35,7 @@ export function streamInvoicePdf(invoice: InvoiceForPdf, res: Response): void {
 
   doc.fontSize(12).text("Cliente:");
   doc.fontSize(10).text(invoice.client.name);
-  if (invoice.client.documentId) doc.text(`Documento: ${invoice.client.documentId}`);
+  if (invoice.client.nit) doc.text(`NIT: ${invoice.client.nit}`);
   if (invoice.client.email) doc.text(`Email: ${invoice.client.email}`);
   if (invoice.client.phone) doc.text(`Teléfono: ${invoice.client.phone}`);
   doc.moveDown();

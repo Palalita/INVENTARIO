@@ -97,3 +97,30 @@ ya existe y está probada) — buen primer follow-up post-lanzamiento.
 - **Bug de UI corregido**: `Button` con `render={<Link/>}` (navegación como
   enlace) generaba una advertencia de Base UI por no declarar `nativeButton={false}`;
   corregido en "Nueva factura" y "Ver factura".
+
+## Actualización 2026-09-16 (segunda ronda de features)
+- **Header con contexto**: la barra superior ahora muestra la sección activa
+  (ícono + nombre) a la izquierda y un menú de usuario (avatar, nombre, rol,
+  correo, cerrar sesión) a la derecha, visible también en mobile (antes el
+  nombre del usuario solo vivía en el pie del sidebar, oculto en mobile).
+- **Campo "Costo" quitado del formulario de producto**: el modelo y el backend
+  conservan `cost` (default 0, no se pierde información existente), pero ya no
+  se pide ni se envía desde el formulario de creación/edición.
+- **`documentId` renombrado a `nit`** en todo el stack (Prisma, migraciones,
+  backend, frontend, docs) — el negocio siempre lo usó como NIT (el seed ya
+  traía "CF-0001", el código fiscal estándar de Consumidor Final en Guatemala).
+  Migración `20260917020541_rename_document_id_to_nit` aplicada en dev y test.
+- **Creación rápida de cliente dentro de "Nueva factura"**: el combobox de
+  cliente (que ya buscaba por nombre/NIT en servidor) ahora ofrece
+  "Crear cliente ⟨texto buscado⟩" al final de la lista; abre el mismo formulario
+  de cliente en modo diálogo controlado, precarga el nombre con lo buscado, y al
+  guardar selecciona automáticamente el cliente recién creado en la factura.
+- **Bug corregido durante QA de esta ronda**: `DropdownMenuLabel` (usado en el
+  nuevo menú de usuario) requiere estar envuelto en `DropdownMenuGroup` — Base UI
+  lanzaba `MenuGroupContext is missing` y tumbaba el árbol de React al abrir el
+  menú. Corregido envolviendo el label en `DropdownMenuGroup`.
+- Verificado end-to-end en navegador: header en todas las secciones, crear
+  producto sin costo, tabla/formulario de clientes con columna "NIT", y el
+  flujo completo de factura nueva → buscar cliente inexistente → crear cliente
+  al vuelo → queda seleccionado → agregar producto → crear factura → detalle
+  muestra el NIT correctamente.

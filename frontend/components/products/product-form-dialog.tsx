@@ -60,7 +60,6 @@ export function ProductFormDialog({ product, trigger }: ProductFormDialogProps) 
       description: "",
       categoryId: "",
       price: 0,
-      cost: 0,
       stock: 0,
       minStock: 0,
     },
@@ -74,7 +73,6 @@ export function ProductFormDialog({ product, trigger }: ProductFormDialogProps) 
         description: product?.description ?? "",
         categoryId: product?.categoryId ?? "",
         price: product ? Number(product.price) : 0,
-        cost: product ? Number(product.cost) : 0,
         stock: product?.stock ?? 0,
         minStock: product?.minStock ?? 0,
       });
@@ -90,7 +88,6 @@ export function ProductFormDialog({ product, trigger }: ProductFormDialogProps) 
       description: values.description || undefined,
       categoryId: values.categoryId || null,
       price: values.price,
-      cost: values.cost,
       minStock: values.minStock,
     };
 
@@ -172,33 +169,18 @@ export function ProductFormDialog({ product, trigger }: ProductFormDialogProps) 
             </Select>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <Label htmlFor="price">Precio</Label>
-              <Input
-                id="price"
-                type="number"
-                step="0.01"
-                min="0"
-                aria-invalid={Boolean(errors.price)}
-                className={cn(errors.price && "border-destructive")}
-                {...register("price")}
-              />
-              {errors.price && <p className="text-sm text-destructive">{errors.price.message}</p>}
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="cost">Costo</Label>
-              <Input
-                id="cost"
-                type="number"
-                step="0.01"
-                min="0"
-                aria-invalid={Boolean(errors.cost)}
-                className={cn(errors.cost && "border-destructive")}
-                {...register("cost")}
-              />
-              {errors.cost && <p className="text-sm text-destructive">{errors.cost.message}</p>}
-            </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="price">Precio</Label>
+            <Input
+              id="price"
+              type="number"
+              step="0.01"
+              min="0"
+              aria-invalid={Boolean(errors.price)}
+              className={cn(errors.price && "border-destructive")}
+              {...register("price")}
+            />
+            {errors.price && <p className="text-sm text-destructive">{errors.price.message}</p>}
           </div>
 
           <div className="grid grid-cols-2 gap-3">

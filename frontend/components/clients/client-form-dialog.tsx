@@ -24,10 +24,25 @@ import type { Client } from "@/lib/types";
 interface ClientFormDialogProps {
   client?: Client;
   trigger?: React.ReactElement;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  onSuccess?: (client: Client) => void;
+  hideTrigger?: boolean;
+  initialName?: string;
 }
 
-export function ClientFormDialog({ client, trigger }: ClientFormDialogProps) {
-  const [open, setOpen] = useState(false);
+export function ClientFormDialog({
+  client,
+  trigger,
+  open: controlledOpen,
+  onOpenChange: controlledOnOpenChange,
+  onSuccess,
+  hideTrigger,
+  initialName,
+}: ClientFormDialogProps) {
+  const [internalOpen, setInternalOpen] = useState(false);
+  const open = controlledOpen ?? internalOpen;
+  const setOpen = controlledOnOpenChange ?? setInternalOpen;
   const isEdit = Boolean(client);
   const createClient = useCreateClient();
   const updateClient = useUpdateClient();
@@ -39,27 +54,27 @@ export function ClientFormDialog({ client, trigger }: ClientFormDialogProps) {
     formState: { errors },
   } = useForm<ClientFormValues>({
     resolver: zodResolver(clientSchema),
-    defaultValues: { name: "", documentId: "", email: "", phone: "", address: "" },
+    defaultValues: { name: "", nit: "", email: "", phone: "", address: "" },
   });
 
   useEffect(() => {
     if (open) {
       reset({
-        name: client?.name ?? "",
-        documentId: client?.documentId ?? "",
+        name: client?.name ?? initialName ?? "",
+        nit: client?.nit ?? "",
         email: client?.email ?? "",
         phone: client?.phone ?? "",
         address: client?.address ?? "",
       });
     }
-  }, [open, client, reset]);
+  }, [open, client, initialName, reset]);
 
   const isSubmitting = createClient.isPending || updateClient.isPending;
 
   async function onSubmit(values: ClientFormValues) {
     const payload = {
       name: values.name,
-      documentId: values.documentId || undefined,
+      nit: values.nit || undefined,
       email: values.email || undefined,
       phone: values.phone || undefined,
       address: values.address || undefined,
@@ -69,11 +84,13 @@ export function ClientFormDialog({ client, trigger }: ClientFormDialogProps) {
       if (isEdit && client) {
         await updateClient.mutateAsync({ id: client.id, payload });
         toast.success("Cliente actualizado");
+        setOpen(false);
       } else {
-        await createClient.mutateAsync(payload);
+        const created = await createClient.mutateAsync(payload);
         toast.success("Cliente creado");
+        setOpen(false);
+        onSuccess?.(created);
       }
-      setOpen(false);
     } catch (error) {
       toast.error(getApiErrorMessage(error, "No se pudo guardar el cliente"));
     }
@@ -81,16 +98,18 @@ export function ClientFormDialog({ client, trigger }: ClientFormDialogProps) {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger
-        render={
-          trigger ?? (
-            <Button size="sm">
-              <Plus className="size-4" />
-              Nuevo cliente
-            </Button>
-          )
-        }
-      />
+      {!hideTrigger && (
+        <DialogTrigger
+          render={
+            trigger ?? (
+              <Button size="sm">
+                <Plus className="size-4" />
+                Nuevo cliente
+              </Button>
+            )
+          }
+        />
+      )}
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>{isEdit ? "Editar cliente" : "Nuevo cliente"}</DialogTitle>
@@ -105,8 +124,8 @@ export function ClientFormDialog({ client, trigger }: ClientFormDialogProps) {
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <Label htmlFor="documentId">Documento</Label>
-              <Input id="documentId" {...register("documentId")} />
+              <Label htmlFor="nit">NIT</Label>
+              <Input id="nit" placeholder="CF" {...register("nit")} />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="phone">Teléfono</Label>
