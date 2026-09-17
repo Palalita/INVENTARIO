@@ -106,6 +106,14 @@ describe("Products CRUD", () => {
   });
 
   describe("Imagen de producto", () => {
+    // Firma real de un PNG (8 bytes) seguida de datos cualquiera: suficiente
+    // para pasar la validación de contenido sin ser un PNG decodificable de
+    // verdad, que es todo lo que el backend revisa.
+    const VALID_PNG_BYTES = Buffer.concat([
+      Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+      Buffer.from([0, 0, 0, 0])
+    ]);
+
     async function createProduct(sku: string) {
       const res = await request(app)
         .post("/api/v1/products")
@@ -120,10 +128,7 @@ describe("Products CRUD", () => {
       const res = await request(app)
         .post(`/api/v1/products/${productId}/image`)
         .set("Authorization", `Bearer ${vendedorToken}`)
-        .attach("image", Buffer.from([0x89, 0x50, 0x4e, 0x47]), {
-          filename: "foto.png",
-          contentType: "image/png"
-        });
+        .attach("image", VALID_PNG_BYTES, { filename: "foto.png", contentType: "image/png" });
 
       expect(res.status).toBe(403);
     });
@@ -143,6 +148,24 @@ describe("Products CRUD", () => {
       expect(res.body.error.code).toBe("INVALID_FILE_TYPE");
     });
 
+    it("rechaza un archivo cuyo contenido real no coincide con el tipo declarado", async () => {
+      // Content-Type dice image/png, pero los bytes no son los de un PNG real
+      // (Content-Type de un multipart lo controla quien sube el archivo, así
+      // que no basta con confiar en lo que declara).
+      const productId = await createProduct("SKU-IMG5");
+
+      const res = await request(app)
+        .post(`/api/v1/products/${productId}/image`)
+        .set("Authorization", `Bearer ${adminToken}`)
+        .attach("image", Buffer.from("<html><body>no soy una imagen</body></html>"), {
+          filename: "falso.png",
+          contentType: "image/png"
+        });
+
+      expect(res.status).toBe(400);
+      expect(res.body.error.code).toBe("INVALID_FILE_CONTENT");
+    });
+
     it("responde con un error claro si el almacenamiento de imágenes no está configurado", async () => {
       // El entorno de test no trae credenciales reales de R2 a propósito.
       const productId = await createProduct("SKU-IMG3");
@@ -150,10 +173,7 @@ describe("Products CRUD", () => {
       const res = await request(app)
         .post(`/api/v1/products/${productId}/image`)
         .set("Authorization", `Bearer ${adminToken}`)
-        .attach("image", Buffer.from([0x89, 0x50, 0x4e, 0x47]), {
-          filename: "foto.png",
-          contentType: "image/png"
-        });
+        .attach("image", VALID_PNG_BYTES, { filename: "foto.png", contentType: "image/png" });
 
       expect(res.status).toBe(400);
       expect(res.body.error.code).toBe("IMAGE_STORAGE_NOT_CONFIGURED");

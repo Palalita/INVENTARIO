@@ -14,6 +14,31 @@ const EXTENSION_BY_MIME_TYPE: Record<string, string> = {
   "image/webp": "webp"
 };
 
+// El middleware de subida (multer) solo valida el Content-Type que el propio
+// cliente declara en el multipart, que se puede falsificar. Antes de aceptar
+// el archivo revisamos los primeros bytes contra la firma real del formato,
+// para que un archivo cualquiera con Content-Type falso ("image/png" en un
+// .html, por ejemplo) no llegue a subirse ni a guardarse en R2.
+const IMAGE_SIGNATURES: Record<string, (buf: Buffer) => boolean> = {
+  "image/png": (buf) =>
+    buf.length >= 8 && buf.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])),
+  "image/jpeg": (buf) => buf.length >= 3 && buf[0] === 0xff && buf[1] === 0xd8 && buf[2] === 0xff,
+  "image/webp": (buf) =>
+    buf.length >= 12 &&
+    buf.subarray(0, 4).toString("ascii") === "RIFF" &&
+    buf.subarray(8, 12).toString("ascii") === "WEBP"
+};
+
+function assertValidImageContent(file: Express.Multer.File) {
+  const matchesSignature = IMAGE_SIGNATURES[file.mimetype];
+  if (!matchesSignature || !matchesSignature(file.buffer)) {
+    throw AppError.badRequest(
+      "El archivo no es una imagen válida del tipo declarado",
+      "INVALID_FILE_CONTENT"
+    );
+  }
+}
+
 function keyFromImageUrl(imageUrl: string): string {
   return imageUrl.replace(`${env.R2_PUBLIC_URL}/`, "");
 }
@@ -117,6 +142,10 @@ export async function deleteProduct(id: string) {
 }
 
 export async function uploadProductImage(id: string, file: Express.Multer.File) {
+  // La validación del contenido del archivo es una regla de entrada pura y no
+  // depende de si R2 está configurado, así que se revisa primero.
+  assertValidImageContent(file);
+
   if (!isR2Configured || !r2Client) {
     throw AppError.badRequest(
       "El almacenamiento de imágenes no está configurado (faltan las variables R2_* en el backend)",

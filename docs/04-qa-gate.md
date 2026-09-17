@@ -162,3 +162,56 @@ ya existe y está probada) — buen primer follow-up post-lanzamiento.
   credenciales reales de R2, así que corren en cualquier entorno.
 - Pendiente de que el usuario configure `R2_*` en `backend/.env` (ver
   `05-go-live.md`) para probar una subida real de punta a punta contra R2.
+
+## Actualización 2026-09-17 (credenciales reales de R2 + revisión de seguridad)
+- **Credenciales de R2 configuradas** por el usuario. Verificado de punta a
+  punta contra la cuenta real: subida (`POST`), miniatura visible en la UI,
+  descarga pública vía la URL de R2.dev (200, `content-type: image/png`), y
+  eliminación (`DELETE`) confirmando con un segundo request que el objeto
+  también desaparece del bucket (404), no solo el campo en la base de datos.
+- Se subieron imágenes ilustrativas propias (generadas con Pillow, sin
+  descargar nada de internet, para no arrastrar ningún tema de licencias) a
+  los dos productos del seed (`ELEC-001` Mouse inalámbrico, `OFI-001` Resma de
+  papel bond carta).
+- **Revisión de seguridad del feature de imágenes y cómo trata la base de
+  datos:**
+  - `Product.imageUrl` es un `String?` — solo la URL vive en Postgres, nunca
+    el binario; no afecta tamaño ni velocidad de respaldo de la BD.
+  - El binario nunca pasa por el navegador hacia R2 directamente: sube por
+    `multipart/form-data` a nuestro propio backend, que reenvía a R2 con las
+    credenciales guardadas solo en `backend/.env` (gitignored). El frontend
+    nunca ve ni necesita las credenciales de R2, y no hace falta configurar
+    CORS en el bucket.
+  - Solo `ADMIN` puede subir/eliminar imágenes (`requireRole`); rutas
+    protegidas con `requireAuth`.
+  - **Bug de seguridad encontrado y corregido en esta revisión**: la
+    validación de tipo de archivo solo confiaba en el `Content-Type` que el
+    propio cliente declara en el multipart (falsificable) — un archivo
+    `.html` renombrado con `Content-Type: image/png` pasaba el filtro. Se
+    agregó `assertValidImageContent()` en `products.service.ts`, que revisa
+    los primeros bytes del archivo contra la firma real del formato (magic
+    bytes de PNG/JPEG/WEBP) antes de aceptar la subida, independiente de lo
+    que diga el header. Nuevo test que sube un `.html` con
+    `Content-Type: image/png` y confirma el rechazo (`400
+    INVALID_FILE_CONTENT`).
+  - Límite de tamaño (5MB) con `multer` en memoria — no se escribe a disco
+    del servidor en ningún punto.
+  - La llave del objeto en R2 se arma como `products/{id-uuid-validado-por-
+    zod}-{randomUUID()}.{extensión-de-una-lista-fija}` — nunca a partir del
+    nombre de archivo que manda el usuario, así que no hay forma de inyectar
+    rutas (`../`) ni de sobreescribir otro objeto del bucket.
+  - Al reemplazar o quitar una imagen, se borra el objeto anterior de R2
+    (con manejo de error silencioso si ya no existe) para no acumular basura
+    ni dejar imágenes viejas accesibles por su URL.
+  - El bucket es público (necesario para poder mostrar las imágenes sin pasar
+    todo el tráfico por nuestro backend), pero cada objeto usa una llave con
+    un UUID aleatorio — nadie puede listar ni adivinar la URL de la imagen de
+    otro producto. Aceptable para fotos de catálogo (no son datos sensibles);
+    no usar este mismo bucket para archivos que si lo sean.
+  - **Pendiente, no implementado a propósito** (bajo riesgo, admin-only): no
+    hay rate limiting específico en `/products/:id/image` más allá de
+    requerir sesión de admin. Si en algún momento se abre la creación de
+    admins a más gente, vale la pena revisitarlo.
+  - Recordatorio ya dado al usuario: como las credenciales de R2 se
+    compartieron por chat, conviene rotarlas (Cloudflare → R2 → Manage API
+    Tokens → eliminar y crear uno nuevo) cuando tenga oportunidad.
