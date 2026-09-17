@@ -104,6 +104,7 @@ model Product {
   sku         String    @unique
   name        String
   description String?
+  imageUrl    String?
   categoryId  String?
   category    Category? @relation(fields: [categoryId], references: [id])
   price       Decimal   @db.Decimal(12, 2)
@@ -191,3 +192,16 @@ model InvoiceItem {
   suficiente, se aborta toda la transacción (409 Conflict).
 - **Anular factura**: dentro de transacción, repone stock (`StockMovement` tipo
   `ENTRADA` con motivo "Anulación factura #N") y marca `status = ANULADA`.
+
+## Imágenes de producto
+- Solo se guarda la **URL** en `Product.imageUrl` — el binario nunca toca
+  PostgreSQL. El archivo se sube a **Cloudflare R2** (API S3-compatible, capa
+  gratuita: 10GB/mes y sin cobro por descargas, a diferencia de S3).
+- El navegador nunca habla directo con R2: sube el archivo por
+  `multipart/form-data` a nuestro propio backend (`POST /products/:id/image`),
+  que valida tipo (JPEG/PNG/WEBP) y tamaño (máx. 5MB) con `multer` en memoria,
+  y lo reenvía a R2 con `@aws-sdk/client-s3`. Evita exponer credenciales de R2
+  al cliente y evita configurar CORS en el bucket.
+- Las variables `R2_*` (`src/config/env.ts`) son **opcionales**: si faltan, el
+  resto de la app sigue funcionando normal y el endpoint de subida responde
+  `400 IMAGE_STORAGE_NOT_CONFIGURED` en vez de romper el arranque del backend.

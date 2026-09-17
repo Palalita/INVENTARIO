@@ -11,6 +11,17 @@
    de refresh token, exige HTTPS).
 4. Configurar `FRONTEND_URL` en el backend con el dominio real del frontend (CORS).
 5. Configurar `NEXT_PUBLIC_API_URL` en el frontend con el dominio real del backend.
+6. (Opcional) Configurar imágenes de producto — Cloudflare R2:
+   - Crear cuenta en cloudflare.com, ir a **R2 Object Storage** → **Create bucket**.
+   - En el bucket, **Settings → Public access**, habilitar el "R2.dev subdomain"
+     (o conectar un dominio propio para producción).
+   - **R2 → Manage API Tokens → Create API Token** con permiso "Object Read & Write"
+     limitado a ese bucket → da `R2_ACCESS_KEY_ID` y `R2_SECRET_ACCESS_KEY`.
+   - `R2_ACCOUNT_ID` está en el panel de la vista general de R2.
+   - Completar en `backend/.env`: `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`,
+     `R2_SECRET_ACCESS_KEY`, `R2_BUCKET_NAME`, `R2_PUBLIC_URL` (sin `/` al final).
+   - Sin estas variables la app funciona normal; solo el botón "Subir imagen" en
+     productos responde un error explicando que falta configurarlas.
 
 ## Opción A — Docker (recomendada si el host lo soporta)
 Este repo incluye `docker-compose.yml` en la raíz (Postgres + backend + frontend).

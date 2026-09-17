@@ -26,6 +26,11 @@ Todas las respuestas paginadas: `{ "data": [...], "page": number, "pageSize": nu
 - `POST /products` (admin) `{ sku, name, description?, categoryId?, price, cost, stock, minStock }`
 - `PATCH /products/:id` (admin)
 - `DELETE /products/:id` (admin) — soft delete (`active=false`)
+- `POST /products/:id/image` (admin) `multipart/form-data`, campo `image` (JPEG/PNG/WEBP, máx. 5MB) —
+  sube la imagen a Cloudflare R2 y actualiza `Product.imageUrl`. 400 `IMAGE_STORAGE_NOT_CONFIGURED` si
+  faltan las variables `R2_*` en el backend; 400 `INVALID_FILE_TYPE` / `FILE_TOO_LARGE` según corresponda.
+- `DELETE /products/:id/image` (admin) — quita `Product.imageUrl` y borra el objeto en R2 si estaba
+  configurado.
 
 ## Stock movements
 - `GET /products/:id/movements?page=`

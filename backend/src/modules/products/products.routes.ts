@@ -2,6 +2,7 @@ import { Router } from "express";
 import { Role } from "@prisma/client";
 import { requireAuth, requireRole } from "../../middlewares/auth";
 import { validate } from "../../middlewares/validate";
+import { uploadImage } from "../../middlewares/upload";
 import {
   createProductSchema,
   idParamSchema,
@@ -39,6 +40,20 @@ router.delete(
   requireRole(Role.ADMIN),
   validate({ params: idParamSchema }),
   productsController.deleteProduct
+);
+
+router.post(
+  "/:id/image",
+  requireRole(Role.ADMIN),
+  validate({ params: idParamSchema }),
+  uploadImage("image"),
+  productsController.uploadProductImage
+);
+router.delete(
+  "/:id/image",
+  requireRole(Role.ADMIN),
+  validate({ params: idParamSchema }),
+  productsController.deleteProductImage
 );
 
 router.get(

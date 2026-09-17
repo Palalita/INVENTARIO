@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronsUpDown, Loader2, Search } from "lucide-react";
+import { ChevronsUpDown, ImageOff, Loader2, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Popover,
@@ -85,8 +85,20 @@ export function ProductAutocomplete({ onSelect, excludeIds = [] }: ProductAutoco
                   disabled={product.stock <= 0}
                   className={cn(product.stock <= 0 && "opacity-50")}
                 >
-                  <div className="flex flex-1 items-center justify-between gap-2">
-                    <div className="min-w-0">
+                  <div className="flex flex-1 items-center gap-2">
+                    <div className="flex size-8 shrink-0 items-center justify-center overflow-hidden rounded-md border bg-muted">
+                      {product.imageUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element -- URL externa (R2), dominio dinámico según el bucket de cada instalación
+                        <img
+                          src={product.imageUrl}
+                          alt={product.name}
+                          className="size-full object-cover"
+                        />
+                      ) : (
+                        <ImageOff className="size-3.5 text-muted-foreground" />
+                      )}
+                    </div>
+                    <div className="min-w-0 flex-1">
                       <p className="truncate font-medium">{product.name}</p>
                       <p className="text-xs text-muted-foreground">
                         {product.sku} · stock: {product.stock}

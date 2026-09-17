@@ -24,6 +24,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { ProductImageField } from "@/components/products/product-image-field";
 import { useCategories } from "@/lib/hooks/use-categories";
 import { useCreateProduct, useUpdateProduct } from "@/lib/hooks/use-products";
 import { getApiErrorMessage } from "@/lib/api";
@@ -121,6 +122,14 @@ export function ProductFormDialog({ product, trigger }: ProductFormDialogProps) 
         <DialogHeader>
           <DialogTitle>{isEdit ? "Editar producto" : "Nuevo producto"}</DialogTitle>
         </DialogHeader>
+
+        {isEdit && product ? (
+          <ProductImageField product={product} />
+        ) : (
+          <p className="text-xs text-muted-foreground">
+            Podrás agregar una imagen después de crear el producto.
+          </p>
+        )}
 
         <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-4">
           <div className="grid grid-cols-2 gap-3">

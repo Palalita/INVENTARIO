@@ -144,3 +144,21 @@ ya existe y está probada) — buen primer follow-up post-lanzamiento.
   (misma hora local que ya usaban `startOfToday()`/`startOfMonth()`) y `to` pasó
   a ser un límite exclusivo al día siguiente. Verificado: una factura creada
   minutos antes ahora aparece correctamente en el gráfico.
+
+## Actualización 2026-09-16 (imágenes de producto)
+- **Feature nueva**: `Product.imageUrl` + `POST/DELETE /products/:id/image`
+  (admin), subiendo a Cloudflare R2 vía backend (nunca directo desde el
+  navegador). Miniatura visible en la tabla de productos, en el formulario de
+  edición (con subir/cambiar/quitar) y en el buscador de productos de "Nueva
+  factura", para que los vendedores identifiquen productos visualmente.
+- El feature está diseñado para **degradar con gracia** sin credenciales de R2
+  (que el usuario aún no había configurado al momento de este commit): el
+  backend arranca normal y el endpoint de subida responde
+  `400 IMAGE_STORAGE_NOT_CONFIGURED` con mensaje claro en vez de romper nada.
+  Verificado en navegador: el toast de error correcto aparece al intentar
+  subir una imagen sin esas variables configuradas.
+- 4 tests backend nuevos (autorización, tipo de archivo inválido, mensaje de
+  "no configurado", eliminar imagen inexistente no falla) — no dependen de
+  credenciales reales de R2, así que corren en cualquier entorno.
+- Pendiente de que el usuario configure `R2_*` en `backend/.env` (ver
+  `05-go-live.md`) para probar una subida real de punta a punta contra R2.

@@ -74,6 +74,34 @@ export function useDeleteProduct() {
   });
 }
 
+export function useUploadProductImage() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, file }: { id: string; file: File }) => {
+      const formData = new FormData();
+      formData.append("image", file);
+      const { data } = await api.post<{ product: Product }>(`/products/${id}/image`, formData);
+      return data.product;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["products"] });
+    },
+  });
+}
+
+export function useDeleteProductImage() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { data } = await api.delete<{ product: Product }>(`/products/${id}/image`);
+      return data.product;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["products"] });
+    },
+  });
+}
+
 export function useStockMovements(productId: string | undefined, page: number) {
   return useQuery({
     queryKey: ["stock-movements", productId, page],

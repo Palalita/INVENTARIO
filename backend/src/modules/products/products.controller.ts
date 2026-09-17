@@ -29,3 +29,13 @@ export const deleteProduct = asyncHandler(async (req: Request, res: Response) =>
   await productsService.deleteProduct(req.params.id);
   res.status(204).send();
 });
+
+export const uploadProductImage = asyncHandler(async (req: Request, res: Response) => {
+  const product = await productsService.uploadProductImage(req.params.id, req.file as Express.Multer.File);
+  res.status(200).json(serialize({ product }));
+});
+
+export const deleteProductImage = asyncHandler(async (req: Request, res: Response) => {
+  const product = await productsService.deleteProductImage(req.params.id);
+  res.status(200).json(serialize({ product }));
+});

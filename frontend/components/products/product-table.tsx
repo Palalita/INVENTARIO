@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
-import { ArrowLeftRight, Pencil, Trash2 } from "lucide-react";
+import { ArrowLeftRight, ImageOff, Pencil, Trash2 } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -54,6 +54,7 @@ export function ProductTable({ products, isLoading, isError, onRetry, isAdmin }:
       <Table>
         <TableHeader>
           <TableRow>
+            <TableHead className="w-1"></TableHead>
             <TableHead>SKU</TableHead>
             <TableHead>Nombre</TableHead>
             <TableHead>Categoría</TableHead>
@@ -66,7 +67,7 @@ export function ProductTable({ products, isLoading, isError, onRetry, isAdmin }:
           {isLoading &&
             Array.from({ length: 6 }).map((_, i) => (
               <TableRow key={i}>
-                {Array.from({ length: 6 }).map((__, j) => (
+                {Array.from({ length: 7 }).map((__, j) => (
                   <TableCell key={j}>
                     <Skeleton className="h-5 w-full" />
                   </TableCell>
@@ -76,7 +77,7 @@ export function ProductTable({ products, isLoading, isError, onRetry, isAdmin }:
 
           {!isLoading && products.length === 0 && (
             <TableRow>
-              <TableCell colSpan={6} className="p-0">
+              <TableCell colSpan={7} className="p-0">
                 <EmptyState
                   title="No hay productos"
                   description="Ajusta los filtros o crea el primer producto del catálogo."
@@ -88,6 +89,20 @@ export function ProductTable({ products, isLoading, isError, onRetry, isAdmin }:
           {!isLoading &&
             products.map((product) => (
               <TableRow key={product.id} className={!product.active ? "opacity-50" : undefined}>
+                <TableCell>
+                  <div className="flex size-9 items-center justify-center overflow-hidden rounded-md border bg-muted">
+                    {product.imageUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element -- URL externa (R2), dominio dinámico según el bucket de cada instalación
+                      <img
+                        src={product.imageUrl}
+                        alt={product.name}
+                        className="size-full object-cover"
+                      />
+                    ) : (
+                      <ImageOff className="size-4 text-muted-foreground" />
+                    )}
+                  </div>
+                </TableCell>
                 <TableCell className="font-mono text-xs">{product.sku}</TableCell>
                 <TableCell>
                   <p className="font-medium">{product.name}</p>

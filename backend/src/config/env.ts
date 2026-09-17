@@ -21,7 +21,15 @@ const envSchema = z.object({
   JWT_ACCESS_SECRET: z.string().min(1, "JWT_ACCESS_SECRET es requerido"),
   REFRESH_TOKEN_SECRET: z.string().min(1, "REFRESH_TOKEN_SECRET es requerido"),
   ADMIN_SEED_PASSWORD: z.string().default("Admin123!"),
-  TAX_RATE: z.coerce.number().nonnegative().default(0.12)
+  TAX_RATE: z.coerce.number().nonnegative().default(0.12),
+  // Imágenes de producto (Cloudflare R2, API S3-compatible). Opcionales: si
+  // faltan, el endpoint de subida responde un error claro en vez de romper el
+  // arranque de la app para quien todavía no las configuró.
+  R2_ACCOUNT_ID: z.string().optional(),
+  R2_ACCESS_KEY_ID: z.string().optional(),
+  R2_SECRET_ACCESS_KEY: z.string().optional(),
+  R2_BUCKET_NAME: z.string().optional(),
+  R2_PUBLIC_URL: z.string().optional()
 });
 
 const parsed = envSchema.safeParse(process.env);

@@ -104,4 +104,70 @@ describe("Products CRUD", () => {
     expect(res.status).toBe(409);
     expect(res.body.error.code).toBe("DUPLICATE_SKU");
   });
+
+  describe("Imagen de producto", () => {
+    async function createProduct(sku: string) {
+      const res = await request(app)
+        .post("/api/v1/products")
+        .set("Authorization", `Bearer ${adminToken}`)
+        .send({ sku, name: `Producto ${sku}`, price: 1, cost: 1, stock: 1, minStock: 1 });
+      return res.body.product.id as string;
+    }
+
+    it("vendedor no puede subir una imagen (403)", async () => {
+      const productId = await createProduct("SKU-IMG1");
+
+      const res = await request(app)
+        .post(`/api/v1/products/${productId}/image`)
+        .set("Authorization", `Bearer ${vendedorToken}`)
+        .attach("image", Buffer.from([0x89, 0x50, 0x4e, 0x47]), {
+          filename: "foto.png",
+          contentType: "image/png"
+        });
+
+      expect(res.status).toBe(403);
+    });
+
+    it("rechaza un tipo de archivo no permitido", async () => {
+      const productId = await createProduct("SKU-IMG2");
+
+      const res = await request(app)
+        .post(`/api/v1/products/${productId}/image`)
+        .set("Authorization", `Bearer ${adminToken}`)
+        .attach("image", Buffer.from("no es una imagen"), {
+          filename: "archivo.txt",
+          contentType: "text/plain"
+        });
+
+      expect(res.status).toBe(400);
+      expect(res.body.error.code).toBe("INVALID_FILE_TYPE");
+    });
+
+    it("responde con un error claro si el almacenamiento de imágenes no está configurado", async () => {
+      // El entorno de test no trae credenciales reales de R2 a propósito.
+      const productId = await createProduct("SKU-IMG3");
+
+      const res = await request(app)
+        .post(`/api/v1/products/${productId}/image`)
+        .set("Authorization", `Bearer ${adminToken}`)
+        .attach("image", Buffer.from([0x89, 0x50, 0x4e, 0x47]), {
+          filename: "foto.png",
+          contentType: "image/png"
+        });
+
+      expect(res.status).toBe(400);
+      expect(res.body.error.code).toBe("IMAGE_STORAGE_NOT_CONFIGURED");
+    });
+
+    it("eliminar la imagen de un producto que no tiene una no falla", async () => {
+      const productId = await createProduct("SKU-IMG4");
+
+      const res = await request(app)
+        .delete(`/api/v1/products/${productId}/image`)
+        .set("Authorization", `Bearer ${adminToken}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.product.imageUrl).toBeNull();
+    });
+  });
 });

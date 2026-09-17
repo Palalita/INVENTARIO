@@ -55,6 +55,8 @@ User, Category, Product, StockMovement, Client, Invoice, InvoiceItem, RefreshTok
   actualizando `Product.stock` en una transacción.
 - Alerta visual de stock bajo (`stock <= minStock`).
 - Búsqueda y filtro por nombre/sku/categoría, con paginación.
+- Imagen de producto (opcional) para que los trabajadores identifiquen cada
+  producto visualmente en el catálogo y al armar una factura.
 
 ### 5.3 Clientes
 - CRUD de clientes (nombre, NIT, email, teléfono, dirección).
