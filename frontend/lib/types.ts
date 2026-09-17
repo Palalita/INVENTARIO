@@ -166,3 +166,16 @@ export interface CreateInvoicePayload {
   clientId: string;
   items: Array<{ productId: string; quantity: number }>;
 }
+
+export interface CreateUserPayload {
+  name: string;
+  email: string;
+  password: string;
+  role: Role;
+}
+
+export interface UpdateUserPayload {
+  name?: string;
+  role?: Role;
+  active?: boolean;
+}

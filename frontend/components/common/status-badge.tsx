@@ -1,6 +1,6 @@
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import type { InvoiceStatus, MovementType } from "@/lib/types";
+import type { InvoiceStatus, MovementType, Role } from "@/lib/types";
 
 export function InvoiceStatusBadge({ status }: { status: InvoiceStatus }) {
   const isCancelled = status === "ANULADA";
@@ -51,6 +51,39 @@ export function MovementTypeBadge({ type }: { type: MovementType }) {
   return (
     <Badge variant="outline" className={cn("font-medium", styles[type])}>
       {MOVEMENT_LABELS[type]}
+    </Badge>
+  );
+}
+
+export function RoleBadge({ role }: { role: Role }) {
+  const isAdmin = role === "ADMIN";
+  return (
+    <Badge
+      variant="outline"
+      className={cn(
+        "font-medium",
+        isAdmin
+          ? "border-primary/30 bg-primary/10 text-primary"
+          : "border-border bg-muted text-foreground"
+      )}
+    >
+      {isAdmin ? "Administrador" : "Vendedor"}
+    </Badge>
+  );
+}
+
+export function ActiveBadge({ active }: { active: boolean }) {
+  return (
+    <Badge
+      variant="outline"
+      className={cn(
+        "font-medium",
+        active
+          ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+          : "border-destructive/30 bg-destructive/10 text-destructive"
+      )}
+    >
+      {active ? "Activo" : "Inactivo"}
     </Badge>
   );
 }

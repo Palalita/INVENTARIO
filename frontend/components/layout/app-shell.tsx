@@ -11,6 +11,7 @@ import {
   Menu,
   Package,
   Receipt,
+  UserCog,
   Users,
 } from "lucide-react";
 import { useState } from "react";
@@ -32,16 +33,25 @@ import { useAuthStore } from "@/lib/stores/auth-store";
 import { cn } from "@/lib/utils";
 
 const NAV_ITEMS = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/productos", label: "Productos", icon: Package },
-  { href: "/clientes", label: "Clientes", icon: Users },
-  { href: "/facturas", label: "Facturas", icon: Receipt },
+  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, adminOnly: false },
+  { href: "/productos", label: "Productos", icon: Package, adminOnly: false },
+  { href: "/clientes", label: "Clientes", icon: Users, adminOnly: false },
+  { href: "/facturas", label: "Facturas", icon: Receipt, adminOnly: false },
+  { href: "/usuarios", label: "Usuarios", icon: UserCog, adminOnly: true },
 ];
 
-function NavLinks({ pathname, onNavigate }: { pathname: string; onNavigate?: () => void }) {
+function NavLinks({
+  items,
+  pathname,
+  onNavigate,
+}: {
+  items: typeof NAV_ITEMS;
+  pathname: string;
+  onNavigate?: () => void;
+}) {
   return (
     <nav className="flex flex-1 flex-col gap-1 px-3">
-      {NAV_ITEMS.map((item) => {
+      {items.map((item) => {
         const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
         const Icon = item.icon;
         return (
@@ -87,6 +97,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const user = useAuthStore((state) => state.user);
   const clearSession = useAuthStore((state) => state.clearSession);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const isAdmin = user?.role === "ADMIN";
+  const visibleNavItems = NAV_ITEMS.filter((item) => !item.adminOnly || isAdmin);
   const currentNavItem = getCurrentNavItem(pathname);
   const CurrentIcon = currentNavItem.icon;
 
@@ -105,7 +117,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <Boxes className="size-5 text-primary" />
           Inventario
         </div>
-        <NavLinks pathname={pathname} />
+        <NavLinks items={visibleNavItems} pathname={pathname} />
         <div className="border-t p-3 text-xs text-muted-foreground">
           <p className="truncate font-medium text-foreground">{user?.name}</p>
           <p className="truncate">{user?.role === "ADMIN" ? "Administrador" : "Vendedor"}</p>
@@ -127,7 +139,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 <Boxes className="size-5 text-primary" />
                 Inventario
               </div>
-              <NavLinks pathname={pathname} onNavigate={() => setMobileOpen(false)} />
+              <NavLinks
+                items={visibleNavItems}
+                pathname={pathname}
+                onNavigate={() => setMobileOpen(false)}
+              />
             </SheetContent>
           </Sheet>
 

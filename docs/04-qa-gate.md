@@ -73,8 +73,6 @@ automatización) hasta completarlo sin errores de consola.
 
 ## Limitaciones conocidas (fuera del flujo dorado principal, no bloquean go-live de un MVP)
 Documentadas explícitamente para que quede claro qué falta, no se descubrió tarde:
-- **No hay UI de gestión de usuarios** (`/usuarios`, solo admin). El backend ya
-  expone `GET/POST/PATCH /users` completos y probados; falta la pantalla.
 - **No hay botón de exportar CSV** del reporte de ventas en el dashboard, aunque
   el backend soporta `GET /dashboard/sales-report?format=csv`.
 - Confirmaciones de fecha en filtros de facturas usan `<input type="date">` nativo
@@ -215,3 +213,38 @@ ya existe y está probada) — buen primer follow-up post-lanzamiento.
   - Recordatorio ya dado al usuario: como las credenciales de R2 se
     compartieron por chat, conviene rotarlas (Cloudflare → R2 → Manage API
     Tokens → eliminar y crear uno nuevo) cuando tenga oportunidad.
+
+## Actualización 2026-09-17 (gestión de usuarios)
+- **Feature nueva**: pantalla `/usuarios` (solo admin) para crear trabajadores
+  y administradores, cambiar su rol y activar/desactivar su acceso. El backend
+  ya existía (`GET/POST/PATCH /users`, construido en la ronda inicial) pero no
+  tenía frontend ni tests; se agregaron ambos en esta ronda.
+- **Decisión de navegación** (confirmada con el usuario antes de implementar,
+  ver conversación): el admin mantiene acceso a Dashboard, Productos, Clientes
+  y Facturas igual que antes (ahí es donde ya vive todo lo que solo admin
+  puede hacer: crear productos/categorías, anular facturas), y se agrega
+  "Usuarios" como una sección más, visible solo para admin. Los vendedores ven
+  Dashboard, Productos, Clientes, Facturas — sin Usuarios.
+- **Protección de ruta**: a diferencia de las demás pantallas (donde el rol
+  solo oculta botones dentro de una página compartida), `/usuarios` es la
+  primera pantalla completa exclusiva de admin — se agregó `RequireAdmin`
+  (`components/require-admin.tsx`), que redirige a `/dashboard` si un
+  vendedor entra por URL directa. Verificado en navegador: iniciar sesión
+  como el trabajador de prueba y navegar a `/usuarios` a mano redirige de
+  inmediato, sin mostrar la pantalla ni por un instante.
+- Un administrador desactivado pierde el acceso de verdad, no solo la
+  visibilidad en el menú: `active=false` ya lo bloqueaba en login/refresh
+  desde el backend original; se agregó un test que lo confirma end-to-end
+  (crear usuario → desactivar → login falla con 401).
+- El correo no es editable después de creado (el backend no lo permite); el
+  campo se ve pero deshabilitado en modo edición, con una nota explicándolo.
+- No hay endpoint para cambiar la contraseña de otro usuario ni un flujo de
+  "olvidé mi contraseña" — no se pidió y son decisiones de producto propias
+  (¿quién resetea a quién?, ¿por correo?), mejor no improvisarlas sin
+  preguntar. Deactivar/reactivar sí cubre el caso de revocar acceso.
+- 7 tests backend nuevos para el módulo de usuarios (no existían antes):
+  crear, listar, cambiar rol, desactivar con bloqueo de login real, email
+  duplicado, y los 403 de autorización para vendedor.
+- Verificado end-to-end en navegador: admin crea un trabajador, aparece en la
+  tabla con sus badges de rol/estado; se inicia sesión como ese trabajador y
+  se confirma que "Usuarios" no aparece en su menú y que la URL redirige.
