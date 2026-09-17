@@ -51,7 +51,7 @@ export function ClientCombobox({ value, onSelect }: ClientComboboxProps) {
           </span>
           <ChevronsUpDown className="size-4 shrink-0 opacity-50" />
         </PopoverTrigger>
-        <PopoverContent className="w-[--anchor-width] p-0" align="start">
+        <PopoverContent className="w-(--anchor-width) p-0" align="start">
           <Command shouldFilter={false}>
             <CommandInput
               placeholder="Buscar por nombre o NIT..."

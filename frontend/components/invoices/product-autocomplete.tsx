@@ -57,7 +57,7 @@ export function ProductAutocomplete({ onSelect, excludeIds = [] }: ProductAutoco
         </span>
         <ChevronsUpDown className="size-4 opacity-50" />
       </PopoverTrigger>
-      <PopoverContent className="w-[--anchor-width] p-0" align="start">
+      <PopoverContent className="w-(--anchor-width) p-0" align="start">
         <Command shouldFilter={false}>
           <CommandInput
             placeholder="Escribe para buscar..."
