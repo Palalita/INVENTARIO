@@ -30,9 +30,9 @@ export default function LoginPage() {
   }
 
   return (
-    <Card className="w-full max-w-sm">
+    <Card className="w-full border-border/60 bg-card/95 shadow-2xl shadow-primary/10 backdrop-blur-sm">
       <CardHeader className="items-center text-center">
-        <div className="mb-2 flex size-12 items-center justify-center rounded-full bg-primary/10 text-primary">
+        <div className="mb-2 flex size-13 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-primary/70 text-primary-foreground shadow-lg shadow-primary/30">
           <Boxes className="size-6" />
         </div>
         <CardTitle className="text-xl">Inventario y Facturación</CardTitle>
