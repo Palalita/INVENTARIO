@@ -178,12 +178,21 @@ model InvoiceItem {
 - JWT access token firmado con `JWT_ACCESS_SECRET`, expira en 15 min.
 - Refresh token opaco (uuid), se guarda hasheado (sha256) en `RefreshToken`,
   se envía al cliente en cookie `httpOnly, secure, sameSite=strict`.
-- `express-rate-limit` en `/api/v1/auth/login` (5 intentos / 15 min por IP).
+- `express-rate-limit` en `/api/v1/auth/login` (5 intentos / 15 min por IP), y
+  uno general más laxo (600/15min) sobre todo `/api/v1` — el store es en
+  memoria del proceso, así que si el backend llega a correr en más de una
+  instancia hace falta moverlo a un store compartido (Redis) para que el
+  límite siga siendo real.
 - `helmet()` con CSP básica; `cors({ origin: FRONTEND_URL, credentials: true })`.
 - Middleware `requireAuth` valida JWT; `requireRole(...roles)` valida autorización.
-- Todas las mutaciones validan body con Zod antes de llegar al service.
-- Contraseñas con `bcrypt`, cost factor 12.
+- Todas las mutaciones validan body con Zod antes de llegar al service,
+  incluyendo un tope máximo (`pageSize` ≤ 100) en todos los listados paginados.
+- Contraseñas con `bcrypt`, cost factor 12. El seed se niega a correr en
+  producción con la contraseña de admin por defecto.
 - Nunca exponer `passwordHash` ni `tokenHash` en responses (usar DTO/select).
+- Anular una factura queda auditado (`Invoice.cancelledAt`,
+  `cancelledByUserId`) — no hay un log de auditoría genérico todavía para el
+  resto de las acciones (editar producto, cambiar precio, etc.).
 
 ## Transacciones críticas
 - **Crear factura**: dentro de `prisma.$transaction`, verificar stock suficiente

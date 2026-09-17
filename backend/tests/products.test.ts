@@ -57,6 +57,15 @@ describe("Products CRUD", () => {
     expect(res.body).toHaveProperty("total");
   });
 
+  it("rechaza un pageSize excesivo (protege contra pedir resultados masivos)", async () => {
+    const res = await request(app)
+      .get("/api/v1/products?pageSize=100000")
+      .set("Authorization", `Bearer ${adminToken}`);
+
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe("VALIDATION_ERROR");
+  });
+
   it("obtiene, actualiza y elimina (soft delete) un producto", async () => {
     const createRes = await request(app)
       .post("/api/v1/products")

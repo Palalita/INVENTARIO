@@ -5,9 +5,23 @@ const prisma = new PrismaClient();
 
 const BCRYPT_COST = 12;
 
+const DEFAULT_ADMIN_PASSWORD = "Admin123!";
+
 async function main() {
-  const adminPassword = process.env.ADMIN_SEED_PASSWORD || "Admin123!";
+  const adminPassword = process.env.ADMIN_SEED_PASSWORD || DEFAULT_ADMIN_PASSWORD;
   const adminEmail = "admin@inventario.local";
+
+  // No permitir que el admin de producción quede con la contraseña por
+  // defecto (que cualquiera puede leer en este mismo archivo, público en el
+  // repositorio). En desarrollo/test sí se permite, por comodidad.
+  if (process.env.NODE_ENV === "production" && adminPassword === DEFAULT_ADMIN_PASSWORD) {
+    console.error(
+      "El seed se negó a correr: NODE_ENV=production pero ADMIN_SEED_PASSWORD no está " +
+        "configurado (o usa el valor por defecto). Define una contraseña fuerte en " +
+        "ADMIN_SEED_PASSWORD antes de correr el seed en producción."
+    );
+    process.exit(1);
+  }
 
   const adminPasswordHash = await bcrypt.hash(adminPassword, BCRYPT_COST);
 

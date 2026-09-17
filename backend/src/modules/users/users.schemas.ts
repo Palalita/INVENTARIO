@@ -3,7 +3,7 @@ import { Role } from "@prisma/client";
 
 export const listUsersQuerySchema = z.object({
   page: z.coerce.number().int().positive().default(1),
-  pageSize: z.coerce.number().int().positive().default(20)
+  pageSize: z.coerce.number().int().positive().max(100).default(20)
 });
 
 export const createUserSchema = z.object({

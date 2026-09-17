@@ -8,12 +8,14 @@ import { createAdmin, createUser, createProduct, createClient, loginAs } from ".
 
 describe("Invoices", () => {
   let adminToken: string;
+  let adminId: string;
   let vendedorToken: string;
 
   beforeEach(async () => {
     await resetDb();
     const admin = await createAdmin({ email: "admin@test.local" });
     const vendedor = await createUser({ email: "vendedor@test.local", role: Role.VENDEDOR });
+    adminId = admin.id;
     adminToken = (await loginAs(admin.email)).body.accessToken;
     vendedorToken = (await loginAs(vendedor.email)).body.accessToken;
   });
@@ -94,6 +96,13 @@ describe("Invoices", () => {
     expect(cancelRes.status).toBe(200);
     expect(cancelRes.body.invoice.status).toBe("ANULADA");
 
+    // Rastro de auditoría: la factura la creó el vendedor, pero la anuló el
+    // admin — cancelledByUserId debe reflejar a quien anuló, no a quien
+    // emitió originalmente.
+    expect(cancelRes.body.invoice.cancelledByUserId).toBe(adminId);
+    expect(cancelRes.body.invoice.cancelledAt).not.toBeNull();
+    expect(cancelRes.body.invoice.cancelledBy?.id).toBe(adminId);
+
     const afterCancel = await prisma.product.findUniqueOrThrow({ where: { id: product.id } });
     expect(afterCancel.stock).toBe(20);
 
@@ -102,6 +111,9 @@ describe("Invoices", () => {
     });
     expect(entradaMovement).not.toBeNull();
     expect(entradaMovement?.quantity).toBe(4);
+    // El movimiento de reversa queda a nombre de quien anuló (admin), no de
+    // quien emitió la factura originalmente (vendedor).
+    expect(entradaMovement?.userId).toBe(adminId);
   });
 
   it("un vendedor no puede anular una factura (403)", async () => {

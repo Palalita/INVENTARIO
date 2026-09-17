@@ -32,6 +32,7 @@ model User {
   active        Boolean         @default(true)
   createdAt     DateTime        @default(now())
   invoices      Invoice[]
+  cancelledInvoices Invoice[]   @relation("InvoiceCancelledBy")
   movements     StockMovement[]
   refreshTokens RefreshToken[]
 }
@@ -74,6 +75,7 @@ model Product {
   invoiceItems InvoiceItem[]
 
   @@index([name])
+  @@index([categoryId])
 }
 
 model StockMovement {
@@ -115,7 +117,14 @@ model Invoice {
   createdAt DateTime      @default(now())
   items     InvoiceItem[]
 
+  cancelledAt       DateTime?
+  cancelledByUserId String?
+  cancelledBy       User?     @relation("InvoiceCancelledBy", fields: [cancelledByUserId], references: [id])
+
   @@index([createdAt])
+  @@index([clientId])
+  @@index([userId])
+  @@index([cancelledByUserId])
 }
 
 model InvoiceItem {
@@ -127,4 +136,7 @@ model InvoiceItem {
   quantity  Int
   unitPrice Decimal @db.Decimal(12, 2)
   subtotal  Decimal @db.Decimal(12, 2)
+
+  @@index([invoiceId])
+  @@index([productId])
 }

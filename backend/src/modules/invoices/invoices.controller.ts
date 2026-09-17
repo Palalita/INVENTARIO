@@ -22,7 +22,7 @@ export const createInvoice = asyncHandler(async (req: Request, res: Response) =>
 });
 
 export const cancelInvoice = asyncHandler(async (req: Request, res: Response) => {
-  const invoice = await invoicesService.cancelInvoice(req.params.id);
+  const invoice = await invoicesService.cancelInvoice(req.params.id, req.user!.sub);
   res.status(200).json(serialize({ invoice }));
 });
 

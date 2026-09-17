@@ -82,6 +82,9 @@ export interface Invoice {
   tax: string;
   total: string;
   createdAt: string;
+  cancelledAt?: string | null;
+  cancelledByUserId?: string | null;
+  cancelledBy?: Pick<User, "id" | "name"> | null;
   items: InvoiceItem[];
 }
 

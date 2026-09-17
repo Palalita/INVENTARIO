@@ -81,6 +81,12 @@ export default function FacturaDetallePage() {
           <p className="text-sm text-muted-foreground">
             {format(parseISO(invoice.createdAt), "d 'de' MMMM yyyy, HH:mm", { locale: es })}
           </p>
+          {invoice.status === "ANULADA" && invoice.cancelledAt && (
+            <p className="text-xs text-destructive">
+              Anulada por {invoice.cancelledBy?.name ?? "—"} el{" "}
+              {format(parseISO(invoice.cancelledAt), "d 'de' MMMM yyyy, HH:mm", { locale: es })}
+            </p>
+          )}
         </div>
         <div className="ml-auto">
           <InvoiceStatusBadge status={invoice.status} />

@@ -7,6 +7,7 @@ import { randomUUID } from "crypto";
 import { env } from "./config/env";
 import { logger } from "./config/logger";
 import { errorHandler, notFoundHandler } from "./middlewares/errorHandler";
+import { apiRateLimiter } from "./middlewares/rateLimit";
 
 import authRoutes from "./modules/auth/auth.routes";
 import usersRoutes from "./modules/users/users.routes";
@@ -49,6 +50,8 @@ export function createApp(): Express {
   app.get("/health", (_req, res) => {
     res.status(200).json({ status: "ok", uptime: process.uptime() });
   });
+
+  app.use("/api/v1", apiRateLimiter);
 
   app.use("/api/v1/auth", authRoutes);
   app.use("/api/v1/users", usersRoutes);

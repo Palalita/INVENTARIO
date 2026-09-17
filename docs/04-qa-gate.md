@@ -248,3 +248,46 @@ ya existe y está probada) — buen primer follow-up post-lanzamiento.
 - Verificado end-to-end en navegador: admin crea un trabajador, aparece en la
   tabla con sus badges de rol/estado; se inicia sesión como ese trabajador y
   se confirma que "Usuarios" no aparece en su menú y que la URL redirige.
+
+## Actualización 2026-09-17 (auditoría de seguridad/escalabilidad + correcciones)
+A partir de una revisión pedida explícitamente por el usuario, se corrigieron
+los hallazgos que eran arreglables por código (sin depender de una cuenta o
+servicio externo nuevo):
+- **`pageSize` sin tope máximo** en los 5 endpoints paginados
+  (`products`, `clients`, `invoices`, `users`, `stock-movements`) — se agregó
+  `.max(100)`. Antes, `?pageSize=999999` era válido y forzaba a la base de
+  datos/proceso a intentar traer resultados masivos. Nuevo test que confirma
+  el rechazo (`400 VALIDATION_ERROR`).
+- **Índices faltantes en llaves foráneas** que se usan en filtros/joins reales:
+  `Product.categoryId`, `Invoice.clientId`, `Invoice.userId`,
+  `InvoiceItem.invoiceId`, `InvoiceItem.productId`. Sin efecto visible con los
+  pocos registros actuales, pero necesarios para que esas consultas no
+  degraden al crecer el volumen de datos.
+- **Rate limiting solo existía en `/auth/login`** — se agregó un límite general
+  de 600 solicitudes/15min sobre todo `/api/v1` (además del límite estricto de
+  5/15min que ya tenía login), como techo razonable ante un cliente
+  descontrolado o una cuenta comprometida. Verificado con los headers
+  `RateLimit-*` de la respuesta real.
+- **El seed ya no permite dejar el admin de producción con la contraseña por
+  defecto**: si `NODE_ENV=production` y no se definió `ADMIN_SEED_PASSWORD`
+  (o quedó en el valor por defecto, público en este mismo repo), el seed se
+  niega a correr con un mensaje claro.
+- **Rastro de auditoría en la anulación de facturas**: se agregaron
+  `Invoice.cancelledAt` y `Invoice.cancelledByUserId` (con su relación a
+  `User`). De paso se corrigió un bug relacionado: el movimiento de stock de
+  reversa (`StockMovement` tipo `ENTRADA` al anular) quedaba registrado a
+  nombre de quien **emitió** la factura originalmente, no de quien la
+  **anuló** — ahora usa correctamente el id del usuario que ejecuta la
+  anulación. Nuevo test que crea la factura como vendedor y la anula como
+  admin, y confirma que tanto `cancelledByUserId` como el `userId` del
+  movimiento de stock apuntan al admin. En el frontend, el detalle de factura
+  ahora muestra "Anulada por ⟨nombre⟩ el ⟨fecha⟩" cuando aplica.
+- Verificado de punta a punta: se creó y anuló una factura de prueba real vía
+  API con el backend corriendo, se confirmaron los campos de auditoría en la
+  respuesta y se vio el mensaje correcto en el detalle de factura en el
+  navegador, antes de limpiar los datos de prueba.
+- **Deliberadamente fuera de esta ronda** (quedan pendientes, requieren una
+  decisión de infraestructura/proveedor, no solo código): CI/CD, respaldos
+  automáticos de la base de datos, monitoreo de errores en producción, 2FA,
+  y flujo de "olvidé mi contraseña". Documentados en la conversación con el
+  usuario como próximos pasos a decidir, no implementados a ciegas.

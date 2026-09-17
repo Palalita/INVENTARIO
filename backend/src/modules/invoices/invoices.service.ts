@@ -8,6 +8,7 @@ import { CreateInvoiceInput, ListInvoicesQuery } from "./invoices.schemas";
 const invoiceInclude = {
   client: true,
   user: { select: { id: true, name: true, email: true, role: true } },
+  cancelledBy: { select: { id: true, name: true, email: true, role: true } },
   items: { include: { product: true } }
 } as const;
 
@@ -142,7 +143,7 @@ export async function createInvoice(userId: string, input: CreateInvoiceInput) {
   });
 }
 
-export async function cancelInvoice(id: string) {
+export async function cancelInvoice(id: string, cancelledByUserId: string) {
   return prisma.$transaction(async (tx) => {
     const invoice = await tx.invoice.findUnique({ where: { id }, include: { items: true } });
     if (!invoice) {
@@ -160,14 +161,16 @@ export async function cancelInvoice(id: string) {
           type: MovementType.ENTRADA,
           quantity: item.quantity,
           reason: `Anulación factura #${invoice.number}`,
-          userId: invoice.userId
+          // Quien registra el movimiento de reversa es quien anula, no
+          // necesariamente quien emitió la factura originalmente.
+          userId: cancelledByUserId
         }
       });
     }
 
     return tx.invoice.update({
       where: { id },
-      data: { status: InvoiceStatus.ANULADA },
+      data: { status: InvoiceStatus.ANULADA, cancelledAt: new Date(), cancelledByUserId },
       include: invoiceInclude
     });
   });

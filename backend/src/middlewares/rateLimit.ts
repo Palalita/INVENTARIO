@@ -1,6 +1,21 @@
 import rateLimit from "express-rate-limit";
 import { isTest } from "../config/env";
 
+// Límite general para toda la API: no protege contra un abuso dirigido y
+// sofisticado (para eso hace falta un store compartido tipo Redis si el
+// backend llega a correr en más de una instancia), pero sí pone un techo
+// razonable a un cliente descontrolado o una cuenta comprometida.
+export const apiRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 600,
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: () => isTest,
+  message: {
+    error: { code: "TOO_MANY_REQUESTS", message: "Demasiadas solicitudes. Intente de nuevo más tarde." }
+  }
+});
+
 export const loginRateLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   limit: 5,
