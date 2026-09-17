@@ -3,10 +3,15 @@ import dotenv from "dotenv";
 import { z } from "zod";
 
 // Carga .env.test cuando NODE_ENV=test, .env en cualquier otro caso.
-// No sobrescribe variables ya presentes en process.env (útil en producción).
+// override: true es intencional: Vitest/Vite precargan variables del .env
+// raíz (incluyendo DATABASE_URL) en process.env antes de que este módulo se
+// ejecute. Sin override, dotenv conserva ese valor ya presente y los tests
+// terminan conectados a la base de datos equivocada (ver resetDb() en
+// tests/helpers/db.ts, que además valida esto en runtime como red de
+// seguridad adicional).
 const rawNodeEnv = process.env.NODE_ENV || "development";
 const envFile = rawNodeEnv === "test" ? ".env.test" : ".env";
-dotenv.config({ path: path.resolve(__dirname, "../../", envFile) });
+dotenv.config({ path: path.resolve(__dirname, "../../", envFile), override: true });
 
 const envSchema = z.object({
   PORT: z.coerce.number().default(4000),
