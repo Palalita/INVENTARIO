@@ -18,6 +18,11 @@ import { InvoiceTable } from "@/components/invoices/invoice-table";
 import { useInvoices, type InvoiceFilters } from "@/lib/hooks/use-invoices";
 
 const PAGE_SIZE = 10;
+const STATUS_LABELS: Record<string, string> = {
+  TODAS: "Todas",
+  EMITIDA: "Emitida",
+  ANULADA: "Anulada",
+};
 
 export default function FacturasPage() {
   const [filters, setFilters] = useState<InvoiceFilters>({ status: "TODAS" });
@@ -37,7 +42,7 @@ export default function FacturasPage() {
           <h1 className="text-2xl font-semibold tracking-tight">Facturas</h1>
           <p className="text-sm text-muted-foreground">Historial de facturación</p>
         </div>
-        <Button render={<Link href="/facturas/nueva" />}>
+        <Button render={<Link href="/facturas/nueva" />} nativeButton={false}>
           <Plus className="size-4" />
           Nueva factura
         </Button>
@@ -69,7 +74,7 @@ export default function FacturasPage() {
             onValueChange={(value) => updateFilter("status", (value as InvoiceFilters["status"]) ?? "TODAS")}
           >
             <SelectTrigger className="w-40">
-              <SelectValue />
+              <SelectValue>{(value: string) => STATUS_LABELS[value] ?? "Todas"}</SelectValue>
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="TODAS">Todas</SelectItem>

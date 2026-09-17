@@ -36,6 +36,8 @@ interface ProductFormDialogProps {
   trigger?: React.ReactElement;
 }
 
+const NO_CATEGORY = "__sin_categoria__";
+
 export function ProductFormDialog({ product, trigger }: ProductFormDialogProps) {
   const [open, setOpen] = useState(false);
   const isEdit = Boolean(product);
@@ -145,13 +147,22 @@ export function ProductFormDialog({ product, trigger }: ProductFormDialogProps) 
           <div className="space-y-1.5">
             <Label>Categoría</Label>
             <Select
-              value={watch("categoryId") || undefined}
-              onValueChange={(value) => setValue("categoryId", value ?? "")}
+              value={watch("categoryId") || NO_CATEGORY}
+              onValueChange={(value) =>
+                setValue("categoryId", !value || value === NO_CATEGORY ? "" : value)
+              }
             >
               <SelectTrigger className="w-full">
-                <SelectValue placeholder="Sin categoría" />
+                <SelectValue placeholder="Sin categoría">
+                  {(value: string) =>
+                    value === NO_CATEGORY
+                      ? "Sin categoría"
+                      : (categories.data ?? []).find((c) => c.id === value)?.name ?? "Sin categoría"
+                  }
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value={NO_CATEGORY}>Sin categoría</SelectItem>
                 {(categories.data ?? []).map((category) => (
                   <SelectItem key={category.id} value={category.id}>
                     {category.name}

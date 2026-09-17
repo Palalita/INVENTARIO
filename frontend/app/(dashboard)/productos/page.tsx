@@ -71,7 +71,13 @@ export default function ProductosPage() {
           }}
         >
           <SelectTrigger className="w-full sm:w-48">
-            <SelectValue placeholder="Categoría" />
+            <SelectValue placeholder="Categoría">
+              {(value: string) =>
+                value === ALL_CATEGORIES
+                  ? "Todas las categorías"
+                  : (categories.data ?? []).find((c) => c.id === value)?.name ?? "Categoría"
+              }
+            </SelectValue>
           </SelectTrigger>
           <SelectContent>
             <SelectItem value={ALL_CATEGORIES}>Todas las categorías</SelectItem>

@@ -49,6 +49,12 @@ interface StockMovementDialogProps {
   trigger?: React.ReactElement;
 }
 
+const MOVEMENT_TYPE_LABELS: Record<string, string> = {
+  ENTRADA: "Entrada",
+  SALIDA: "Salida",
+  AJUSTE: "Ajuste",
+};
+
 export function StockMovementDialog({ product, trigger }: StockMovementDialogProps) {
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState("movimiento");
@@ -129,7 +135,9 @@ export function StockMovementDialog({ product, trigger }: StockMovementDialogPro
                   }
                 >
                   <SelectTrigger className="w-full">
-                    <SelectValue />
+                    <SelectValue>
+                      {(value: string) => MOVEMENT_TYPE_LABELS[value] ?? value}
+                    </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="ENTRADA">Entrada</SelectItem>

@@ -80,7 +80,13 @@ export function InvoiceTable({ invoices, isLoading, isError, onRetry }: InvoiceT
                   {formatCurrency(invoice.total)}
                 </TableCell>
                 <TableCell>
-                  <Button variant="ghost" size="icon-sm" aria-label="Ver factura" render={<Link href={`/facturas/${invoice.id}`} />}>
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    aria-label="Ver factura"
+                    render={<Link href={`/facturas/${invoice.id}`} />}
+                    nativeButton={false}
+                  >
                     <Eye className="size-4" />
                   </Button>
                 </TableCell>
