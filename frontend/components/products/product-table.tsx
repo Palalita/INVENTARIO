@@ -50,7 +50,7 @@ export function ProductTable({ products, isLoading, isError, onRetry, isAdmin }:
   }
 
   return (
-    <div className="rounded-lg border">
+    <div className="overflow-hidden rounded-xl bg-card shadow-sm shadow-foreground/5 ring-1 ring-foreground/[0.06]">
       <Table>
         <TableHeader>
           <TableRow>
