@@ -17,7 +17,7 @@ export function KpiCard({ label, value, icon: Icon, isLoading, tone = "default" 
       <CardContent className="flex items-center gap-4">
         <div
           className={cn(
-            "flex size-11 shrink-0 items-center justify-center rounded-xl",
+            "flex size-12 shrink-0 items-center justify-center rounded-2xl",
             tone === "warning" ? "bg-amber-500/10 text-amber-600 dark:text-amber-400" : "bg-primary/10 text-primary"
           )}
         >
@@ -26,9 +26,9 @@ export function KpiCard({ label, value, icon: Icon, isLoading, tone = "default" 
         <div className="min-w-0">
           <p className="text-sm text-muted-foreground">{label}</p>
           {isLoading ? (
-            <Skeleton className="mt-1 h-7 w-24" />
+            <Skeleton className="mt-1 h-8 w-24" />
           ) : (
-            <p className="truncate text-2xl font-semibold">{value}</p>
+            <p className="truncate text-3xl font-semibold tracking-tight">{value}</p>
           )}
         </div>
       </CardContent>

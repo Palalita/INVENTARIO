@@ -60,9 +60,9 @@ function NavLinks({
             href={item.href}
             onClick={onNavigate}
             className={cn(
-              "flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+              "flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-medium transition-colors",
               isActive
-                ? "bg-primary text-primary-foreground"
+                ? "bg-primary text-primary-foreground shadow-sm shadow-primary/30"
                 : "text-muted-foreground hover:bg-muted hover:text-foreground"
             )}
           >
@@ -110,22 +110,31 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="flex min-h-screen w-full bg-muted/20">
+    <div className="flex h-screen w-full overflow-hidden bg-muted/20">
       {/* Desktop sidebar */}
       <aside className="hidden w-60 flex-col border-r bg-background md:flex">
-        <div className="flex h-14 items-center gap-2 border-b px-4 font-semibold">
-          <Boxes className="size-5 text-primary" />
+        <div className="flex h-14 items-center gap-2.5 border-b px-4 font-semibold">
+          <div className="flex size-7 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+            <Boxes className="size-4" />
+          </div>
           Inventario
         </div>
         <NavLinks items={visibleNavItems} pathname={pathname} />
-        <div className="border-t p-3 text-xs text-muted-foreground">
-          <p className="truncate font-medium text-foreground">{user?.name}</p>
-          <p className="truncate">{user?.role === "ADMIN" ? "Administrador" : "Vendedor"}</p>
+        <div className="flex items-center gap-2.5 border-t p-3">
+          <Avatar size="sm">
+            <AvatarFallback>{user ? initials(user.name) : "?"}</AvatarFallback>
+          </Avatar>
+          <div className="min-w-0">
+            <p className="truncate text-sm font-medium text-foreground">{user?.name}</p>
+            <p className="truncate text-xs text-muted-foreground">
+              {user?.role === "ADMIN" ? "Administrador" : "Vendedor"}
+            </p>
+          </div>
         </div>
       </aside>
 
-      <div className="flex min-h-screen flex-1 flex-col">
-        <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b bg-background px-4">
+      <div className="flex h-screen flex-1 flex-col overflow-hidden">
+        <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center gap-3 border-b bg-background px-4">
           <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
             <SheetTrigger
               render={
@@ -135,8 +144,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <Menu className="size-5" />
             </SheetTrigger>
             <SheetContent side="left" className="w-60 p-0">
-              <div className="flex h-14 items-center gap-2 border-b px-4 font-semibold">
-                <Boxes className="size-5 text-primary" />
+              <div className="flex h-14 items-center gap-2.5 border-b px-4 font-semibold">
+                <div className="flex size-7 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+                  <Boxes className="size-4" />
+                </div>
                 Inventario
               </div>
               <NavLinks
@@ -185,7 +196,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </DropdownMenu>
         </header>
 
-        <main className="flex-1 p-4 md:p-6">{children}</main>
+        <main className="flex-1 overflow-y-auto p-4 md:p-6">{children}</main>
       </div>
     </div>
   );
