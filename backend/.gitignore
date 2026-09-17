@@ -1,0 +1,2 @@
+# Env files with local secrets/credentials (root .gitignore already covers .env)
+.env.test

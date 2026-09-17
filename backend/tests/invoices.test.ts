@@ -1,0 +1,145 @@
+import { beforeEach, afterAll, describe, expect, it } from "vitest";
+import request from "supertest";
+import { Role, MovementType } from "@prisma/client";
+import { app } from "./helpers/app";
+import { resetDb, disconnectDb } from "./helpers/db";
+import { prisma } from "../src/config/prisma";
+import { createAdmin, createUser, createProduct, createClient, loginAs } from "./helpers/factories";
+
+describe("Invoices", () => {
+  let adminToken: string;
+  let vendedorToken: string;
+
+  beforeEach(async () => {
+    await resetDb();
+    const admin = await createAdmin({ email: "admin@test.local" });
+    const vendedor = await createUser({ email: "vendedor@test.local", role: Role.VENDEDOR });
+    adminToken = (await loginAs(admin.email)).body.accessToken;
+    vendedorToken = (await loginAs(vendedor.email)).body.accessToken;
+  });
+
+  afterAll(async () => {
+    await disconnectDb();
+  });
+
+  it("crea una factura, descuenta el stock y calcula subtotal/impuesto/total correctamente", async () => {
+    const product = await createProduct({ price: 10, stock: 20, minStock: 2 });
+    const client = await createClient();
+
+    const res = await request(app)
+      .post("/api/v1/invoices")
+      .set("Authorization", `Bearer ${vendedorToken}`)
+      .send({ clientId: client.id, items: [{ productId: product.id, quantity: 3 }] });
+
+    expect(res.status).toBe(201);
+    expect(res.body.invoice.status).toBe("EMITIDA");
+    expect(res.body.invoice.subtotal).toBe("30.00");
+    expect(res.body.invoice.tax).toBe("3.60"); // 12% default
+    expect(res.body.invoice.total).toBe("33.60");
+
+    const updatedProduct = await prisma.product.findUniqueOrThrow({ where: { id: product.id } });
+    expect(updatedProduct.stock).toBe(17);
+
+    const movement = await prisma.stockMovement.findFirst({
+      where: { productId: product.id, type: MovementType.SALIDA }
+    });
+    expect(movement).not.toBeNull();
+    expect(movement?.quantity).toBe(3);
+  });
+
+  it("devuelve 409 INSUFFICIENT_STOCK y no modifica el stock si no hay suficiente", async () => {
+    const product = await createProduct({ price: 10, stock: 5, minStock: 1 });
+    const client = await createClient();
+
+    const res = await request(app)
+      .post("/api/v1/invoices")
+      .set("Authorization", `Bearer ${vendedorToken}`)
+      .send({ clientId: client.id, items: [{ productId: product.id, quantity: 100 }] });
+
+    expect(res.status).toBe(409);
+    expect(res.body.error.code).toBe("INSUFFICIENT_STOCK");
+    expect(res.body.error.details).toEqual([
+      { productId: product.id, available: 5, requested: 100 }
+    ]);
+
+    const unchangedProduct = await prisma.product.findUniqueOrThrow({ where: { id: product.id } });
+    expect(unchangedProduct.stock).toBe(5);
+
+    const invoiceCount = await prisma.invoice.count();
+    expect(invoiceCount).toBe(0);
+
+    const movementCount = await prisma.stockMovement.count();
+    expect(movementCount).toBe(0);
+  });
+
+  it("anular una factura repone el stock y marca status ANULADA", async () => {
+    const product = await createProduct({ price: 10, stock: 20, minStock: 2 });
+    const client = await createClient();
+
+    const createRes = await request(app)
+      .post("/api/v1/invoices")
+      .set("Authorization", `Bearer ${vendedorToken}`)
+      .send({ clientId: client.id, items: [{ productId: product.id, quantity: 4 }] });
+
+    expect(createRes.status).toBe(201);
+    const invoiceId = createRes.body.invoice.id;
+
+    const afterCreate = await prisma.product.findUniqueOrThrow({ where: { id: product.id } });
+    expect(afterCreate.stock).toBe(16);
+
+    const cancelRes = await request(app)
+      .patch(`/api/v1/invoices/${invoiceId}/cancel`)
+      .set("Authorization", `Bearer ${adminToken}`);
+
+    expect(cancelRes.status).toBe(200);
+    expect(cancelRes.body.invoice.status).toBe("ANULADA");
+
+    const afterCancel = await prisma.product.findUniqueOrThrow({ where: { id: product.id } });
+    expect(afterCancel.stock).toBe(20);
+
+    const entradaMovement = await prisma.stockMovement.findFirst({
+      where: { productId: product.id, type: MovementType.ENTRADA }
+    });
+    expect(entradaMovement).not.toBeNull();
+    expect(entradaMovement?.quantity).toBe(4);
+  });
+
+  it("un vendedor no puede anular una factura (403)", async () => {
+    const product = await createProduct({ price: 10, stock: 20, minStock: 2 });
+    const client = await createClient();
+
+    const createRes = await request(app)
+      .post("/api/v1/invoices")
+      .set("Authorization", `Bearer ${vendedorToken}`)
+      .send({ clientId: client.id, items: [{ productId: product.id, quantity: 1 }] });
+
+    const invoiceId = createRes.body.invoice.id;
+
+    const cancelRes = await request(app)
+      .patch(`/api/v1/invoices/${invoiceId}/cancel`)
+      .set("Authorization", `Bearer ${vendedorToken}`);
+
+    expect(cancelRes.status).toBe(403);
+  });
+
+  it("genera el PDF de una factura", async () => {
+    const product = await createProduct({ price: 10, stock: 20, minStock: 2 });
+    const client = await createClient();
+
+    const createRes = await request(app)
+      .post("/api/v1/invoices")
+      .set("Authorization", `Bearer ${vendedorToken}`)
+      .send({ clientId: client.id, items: [{ productId: product.id, quantity: 1 }] });
+
+    const invoiceId = createRes.body.invoice.id;
+
+    const pdfRes = await request(app)
+      .get(`/api/v1/invoices/${invoiceId}/pdf`)
+      .set("Authorization", `Bearer ${adminToken}`);
+
+    expect(pdfRes.status).toBe(200);
+    expect(pdfRes.headers["content-type"]).toBe("application/pdf");
+    const bodyLength = Buffer.isBuffer(pdfRes.body) ? pdfRes.body.length : (pdfRes.text ?? "").length;
+    expect(bodyLength).toBeGreaterThan(0);
+  });
+});
