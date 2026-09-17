@@ -126,7 +126,7 @@ export function StockMovementDialog({ product, trigger }: StockMovementDialogPro
 
           <TabsContent value="movimiento" className="space-y-4 pt-2">
             <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-4">
-              <div className="space-y-1.5">
+              <div className="flex flex-col gap-1.5">
                 <Label>Tipo</Label>
                 <Select
                   value={watch("type")}

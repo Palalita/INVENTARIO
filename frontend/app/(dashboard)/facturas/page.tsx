@@ -67,7 +67,7 @@ export default function FacturasPage() {
             onChange={(e) => updateFilter("to", e.target.value || undefined)}
           />
         </div>
-        <div className="space-y-1.5">
+        <div className="flex flex-col gap-1.5">
           <Label>Estado</Label>
           <Select
             value={filters.status}

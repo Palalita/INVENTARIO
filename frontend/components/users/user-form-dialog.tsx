@@ -150,7 +150,7 @@ export function UserFormDialog({ user, trigger }: UserFormDialogProps) {
           )}
 
           <div className={isEdit ? "grid grid-cols-2 gap-3" : undefined}>
-            <div className="space-y-1.5">
+            <div className="flex flex-col gap-1.5">
               <Label>Rol</Label>
               <Select
                 value={watch("role")}
@@ -167,7 +167,7 @@ export function UserFormDialog({ user, trigger }: UserFormDialogProps) {
             </div>
 
             {isEdit && (
-              <div className="space-y-1.5">
+              <div className="flex flex-col gap-1.5">
                 <Label>Estado</Label>
                 <Select
                   value={active ? "true" : "false"}

@@ -161,7 +161,7 @@ export function ProductFormDialog({ product, trigger }: ProductFormDialogProps) 
             <Textarea id="description" rows={2} {...register("description")} />
           </div>
 
-          <div className="space-y-1.5">
+          <div className="flex flex-col gap-1.5">
             <Label>Categoría</Label>
             <Select
               value={watch("categoryId") || NO_CATEGORY}
