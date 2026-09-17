@@ -124,3 +124,23 @@ ya existe y está probada) — buen primer follow-up post-lanzamiento.
   flujo completo de factura nueva → buscar cliente inexistente → crear cliente
   al vuelo → queda seleccionado → agregar producto → crear factura → detalle
   muestra el NIT correctamente.
+
+## Actualización 2026-09-16 (bugs de datos post-lanzamiento)
+- **Causa raíz encontrada de las bases de datos vacías recurrentes**: Vitest/Vite
+  precargan `DATABASE_URL` del `.env` raíz en `process.env` antes de que corriera
+  `src/config/env.ts`; como `dotenv.config()` no sobreescribe por defecto,
+  `.env.test` no tenía efecto pese a que `NODE_ENV=test` sí se resolvía bien —
+  cada `npm test` vaciaba la base de datos de **desarrollo**, no la de test.
+  Corregido con `override: true` en la carga de env, más una guarda en
+  `resetDb()` que aborta si `NODE_ENV`/`DATABASE_URL` no apuntan claramente a
+  una base de test. Verificado corriendo la suite completa y confirmando que
+  los datos de desarrollo sobreviven.
+- **Bug corregido**: el gráfico "Ventas — últimos 14 días" no mostraba ventas
+  del día aunque existieran. `getSalesReport` comparaba fechas de calendario
+  (`YYYY-MM-DD`, sin hora) parseadas como medianoche **UTC** contra timestamps
+  guardados en UTC pero generados en hora **local** del servidor — en cualquier
+  zona horaria detrás de UTC (como la de este proyecto, Guatemala/UTC-6) eso
+  recorta ventas de la tarde/noche del rango. Se agregó `startOfLocalDay()`
+  (misma hora local que ya usaban `startOfToday()`/`startOfMonth()`) y `to` pasó
+  a ser un límite exclusivo al día siguiente. Verificado: una factura creada
+  minutos antes ahora aparece correctamente en el gráfico.

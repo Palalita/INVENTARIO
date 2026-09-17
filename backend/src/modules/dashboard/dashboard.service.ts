@@ -24,6 +24,13 @@ function userScopeWhere(requester: RequestingUser): Prisma.InvoiceWhereInput {
   return requester.role === Role.VENDEDOR ? { userId: requester.id } : {};
 }
 
+// Convierte una fecha de calendario "YYYY-MM-DD" a medianoche en la zona
+// horaria LOCAL del servidor (no UTC), igual que startOfToday()/startOfMonth().
+function startOfLocalDay(dateStr: string, addDays = 0): Date {
+  const [year, month, day] = dateStr.split("-").map(Number);
+  return new Date(year, month - 1, day + addDays);
+}
+
 export async function getSummary(requester: RequestingUser) {
   const scope = userScopeWhere(requester);
 
@@ -87,8 +94,14 @@ export async function getSalesReport(query: SalesReportQuery, requester: Request
 
   if (query.from || query.to) {
     where.createdAt = {};
-    if (query.from) where.createdAt.gte = new Date(query.from);
-    if (query.to) where.createdAt.lte = new Date(query.to);
+    // "from"/"to" llegan como fechas de calendario ("YYYY-MM-DD") sin hora.
+    // new Date("YYYY-MM-DD") las interpreta como medianoche UTC, no medianoche
+    // local, lo que corta ventas del día (sobre todo las de la tarde/noche)
+    // en cualquier zona horaria detrás de UTC. Se parsean como fecha local,
+    // igual que startOfToday()/startOfMonth() más arriba, y "to" se vuelve un
+    // límite exclusivo al día siguiente para incluir el día completo.
+    if (query.from) where.createdAt.gte = startOfLocalDay(query.from);
+    if (query.to) where.createdAt.lt = startOfLocalDay(query.to, 1);
   }
 
   const invoices = await prisma.invoice.findMany({
