@@ -49,7 +49,7 @@ export async function getSummary(requester: RequestingUser) {
     prisma.invoiceItem.groupBy({
       by: ["productId"],
       where: { invoice: { ...scope, status: InvoiceStatus.EMITIDA } },
-      _sum: { quantity: true },
+      _sum: { quantity: true, subtotal: true },
       orderBy: { _sum: { quantity: "desc" } },
       take: 5
     })
@@ -59,10 +59,19 @@ export async function getSummary(requester: RequestingUser) {
   const products = await prisma.product.findMany({ where: { id: { in: productIds } } });
   const productsById = new Map(products.map((p) => [p.id, p]));
 
-  const topProducts = topProductsRaw.map((t) => ({
-    product: productsById.get(t.productId) ?? null,
-    quantitySold: t._sum.quantity ?? 0
-  }));
+  const topProducts = topProductsRaw
+    .map((t) => {
+      const product = productsById.get(t.productId);
+      if (!product) return null;
+      return {
+        productId: product.id,
+        name: product.name,
+        sku: product.sku,
+        quantitySold: t._sum.quantity ?? 0,
+        totalSold: t._sum.subtotal ?? new Prisma.Decimal(0)
+      };
+    })
+    .filter((t): t is NonNullable<typeof t> => t !== null);
 
   return {
     salesToday: salesTodayAgg._sum.total ?? new Prisma.Decimal(0),
