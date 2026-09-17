@@ -25,8 +25,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ProductImageField } from "@/components/products/product-image-field";
+import { ProductImagePicker } from "@/components/products/product-image-picker";
 import { useCategories } from "@/lib/hooks/use-categories";
-import { useCreateProduct, useUpdateProduct } from "@/lib/hooks/use-products";
+import { useCreateProduct, useUpdateProduct, useUploadProductImage } from "@/lib/hooks/use-products";
 import { getApiErrorMessage } from "@/lib/api";
 import { productSchema, type ProductFormValues } from "@/lib/schemas/product";
 import type { Product } from "@/lib/types";
@@ -41,10 +42,12 @@ const NO_CATEGORY = "__sin_categoria__";
 
 export function ProductFormDialog({ product, trigger }: ProductFormDialogProps) {
   const [open, setOpen] = useState(false);
+  const [pendingImageFile, setPendingImageFile] = useState<File | null>(null);
   const isEdit = Boolean(product);
   const categories = useCategories();
   const createProduct = useCreateProduct();
   const updateProduct = useUpdateProduct();
+  const uploadImage = useUploadProductImage();
 
   const {
     register,
@@ -77,10 +80,11 @@ export function ProductFormDialog({ product, trigger }: ProductFormDialogProps) 
         stock: product?.stock ?? 0,
         minStock: product?.minStock ?? 0,
       });
+      setPendingImageFile(null);
     }
   }, [open, product, reset]);
 
-  const isSubmitting = createProduct.isPending || updateProduct.isPending;
+  const isSubmitting = createProduct.isPending || updateProduct.isPending || uploadImage.isPending;
 
   async function onSubmit(values: ProductFormValues) {
     const basePayload = {
@@ -97,8 +101,17 @@ export function ProductFormDialog({ product, trigger }: ProductFormDialogProps) 
         await updateProduct.mutateAsync({ id: product.id, payload: basePayload });
         toast.success("Producto actualizado");
       } else {
-        await createProduct.mutateAsync({ ...basePayload, stock: values.stock });
+        const created = await createProduct.mutateAsync({ ...basePayload, stock: values.stock });
         toast.success("Producto creado");
+        if (pendingImageFile) {
+          try {
+            await uploadImage.mutateAsync({ id: created.id, file: pendingImageFile });
+          } catch (imageError) {
+            toast.error(
+              getApiErrorMessage(imageError, "El producto se creó, pero no se pudo subir la imagen")
+            );
+          }
+        }
       }
       setOpen(false);
     } catch (error) {
@@ -126,9 +139,7 @@ export function ProductFormDialog({ product, trigger }: ProductFormDialogProps) 
         {isEdit && product ? (
           <ProductImageField product={product} />
         ) : (
-          <p className="text-xs text-muted-foreground">
-            Podrás agregar una imagen después de crear el producto.
-          </p>
+          <ProductImagePicker file={pendingImageFile} onChange={setPendingImageFile} />
         )}
 
         <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-4">
