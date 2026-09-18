@@ -7,28 +7,36 @@ interface RequestingUser {
   role: Role;
 }
 
+// El negocio opera en hora de Guatemala (UTC-6, sin horario de verano), pero
+// el servidor (Railway) corre en UTC. Si "hoy"/"este mes" se calculan con la
+// hora local del proceso, las facturas hechas de 6pm a medianoche (hora GT)
+// caen en el día UTC siguiente y desaparecen de los reportes/gráficas del día
+// que el usuario espera. Se fija el offset del negocio en vez de depender de
+// la zona horaria del contenedor.
+const BUSINESS_UTC_OFFSET_MS = -6 * 60 * 60 * 1000;
+
 function startOfToday(): Date {
-  const d = new Date();
-  d.setHours(0, 0, 0, 0);
-  return d;
+  const shifted = new Date(Date.now() + BUSINESS_UTC_OFFSET_MS);
+  shifted.setUTCHours(0, 0, 0, 0);
+  return new Date(shifted.getTime() - BUSINESS_UTC_OFFSET_MS);
 }
 
 function startOfMonth(): Date {
-  const d = new Date();
-  d.setDate(1);
-  d.setHours(0, 0, 0, 0);
-  return d;
+  const shifted = new Date(Date.now() + BUSINESS_UTC_OFFSET_MS);
+  const firstOfMonth = new Date(Date.UTC(shifted.getUTCFullYear(), shifted.getUTCMonth(), 1));
+  return new Date(firstOfMonth.getTime() - BUSINESS_UTC_OFFSET_MS);
 }
 
 function userScopeWhere(requester: RequestingUser): Prisma.InvoiceWhereInput {
   return requester.role === Role.VENDEDOR ? { userId: requester.id } : {};
 }
 
-// Convierte una fecha de calendario "YYYY-MM-DD" a medianoche en la zona
-// horaria LOCAL del servidor (no UTC), igual que startOfToday()/startOfMonth().
+// Convierte una fecha de calendario "YYYY-MM-DD" (tal como la ve el usuario
+// en Guatemala) a su medianoche real en UTC, igual que startOfToday().
 function startOfLocalDay(dateStr: string, addDays = 0): Date {
   const [year, month, day] = dateStr.split("-").map(Number);
-  return new Date(year, month - 1, day + addDays);
+  const midnightAsUtc = new Date(Date.UTC(year, month - 1, day + addDays));
+  return new Date(midnightAsUtc.getTime() - BUSINESS_UTC_OFFSET_MS);
 }
 
 export async function getSummary(requester: RequestingUser) {
