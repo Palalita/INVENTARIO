@@ -7,18 +7,29 @@ import * as authService from "./auth.service";
 const REFRESH_COOKIE_NAME = "refreshToken";
 const REFRESH_COOKIE_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 
+// "none" es necesario porque frontend (Vercel) y backend (Railway) viven en
+// dominios distintos; con "strict"/"lax" el navegador nunca envía la cookie
+// entre sitios y el refresh siempre falla. Requiere secure: true (solo se usa
+// en producción, donde ya corre bajo HTTPS).
+const REFRESH_COOKIE_SAME_SITE = isProduction ? "none" : "strict";
+
 function setRefreshCookie(res: Response, rawToken: string) {
   res.cookie(REFRESH_COOKIE_NAME, rawToken, {
     httpOnly: true,
     secure: isProduction,
-    sameSite: "strict",
+    sameSite: REFRESH_COOKIE_SAME_SITE,
     maxAge: REFRESH_COOKIE_MAX_AGE_MS,
     path: "/"
   });
 }
 
 function clearRefreshCookie(res: Response) {
-  res.clearCookie(REFRESH_COOKIE_NAME, { httpOnly: true, secure: isProduction, sameSite: "strict", path: "/" });
+  res.clearCookie(REFRESH_COOKIE_NAME, {
+    httpOnly: true,
+    secure: isProduction,
+    sameSite: REFRESH_COOKIE_SAME_SITE,
+    path: "/"
+  });
 }
 
 export const login = asyncHandler(async (req: Request, res: Response) => {
