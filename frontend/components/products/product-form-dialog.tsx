@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
@@ -69,8 +69,12 @@ export function ProductFormDialog({ product, trigger }: ProductFormDialogProps) 
     },
   });
 
-  useEffect(() => {
-    if (open) {
+  // Se resetea el form en el evento de apertura (no en un efecto atado al
+  // prop `product`): si el form reaccionara a cada cambio de referencia de
+  // `product`, una revalidación en segundo plano de la lista de productos
+  // mientras el modal está abierto borraría lo que el usuario esté editando.
+  function handleOpenChange(nextOpen: boolean) {
+    if (nextOpen) {
       reset({
         sku: product?.sku ?? "",
         name: product?.name ?? "",
@@ -82,7 +86,8 @@ export function ProductFormDialog({ product, trigger }: ProductFormDialogProps) 
       });
       setPendingImageFile(null);
     }
-  }, [open, product, reset]);
+    setOpen(nextOpen);
+  }
 
   const isSubmitting = createProduct.isPending || updateProduct.isPending || uploadImage.isPending;
 
@@ -120,7 +125,7 @@ export function ProductFormDialog({ product, trigger }: ProductFormDialogProps) 
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger
         render={
           trigger ?? (

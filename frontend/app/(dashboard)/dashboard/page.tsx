@@ -1,16 +1,24 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { AlertTriangle, DollarSign, Package, Receipt } from "lucide-react";
 import { subDays, format } from "date-fns";
 import { KpiCard } from "@/components/dashboard/kpi-card";
-import { SalesChart } from "@/components/dashboard/sales-chart";
 import { TopProductsTable } from "@/components/dashboard/top-products-table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/common/empty-state";
 import { ErrorState } from "@/components/common/error-state";
 import { StockBadge } from "@/components/common/status-badge";
 import { useDashboardSummary, useSalesReport } from "@/lib/hooks/use-dashboard";
 import { formatCurrency } from "@/lib/invoice-calculations";
+
+// recharts arrastra su propio bundle (D3 debajo); se carga solo cuando el
+// dashboard se monta en el cliente, en vez de sumarse al bundle inicial.
+const SalesChart = dynamic(
+  () => import("@/components/dashboard/sales-chart").then((m) => m.SalesChart),
+  { ssr: false, loading: () => <Skeleton className="col-span-full h-96 lg:col-span-2" /> }
+);
 
 export default function DashboardPage() {
   const summary = useDashboardSummary();

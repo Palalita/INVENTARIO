@@ -43,12 +43,14 @@ export function calculateInvoiceTotals(
   return { subtotal, tax, total };
 }
 
+const currencyFormatter = new Intl.NumberFormat("es-GT", {
+  style: "currency",
+  currency: "GTQ",
+  minimumFractionDigits: 2,
+});
+
 export function formatCurrency(amount: number | string): string {
   const numeric = typeof amount === "string" ? Number(amount) : amount;
   if (!Number.isFinite(numeric)) return "Q0.00";
-  return new Intl.NumberFormat("es-GT", {
-    style: "currency",
-    currency: "GTQ",
-    minimumFractionDigits: 2,
-  }).format(numeric);
+  return currencyFormatter.format(numeric);
 }
