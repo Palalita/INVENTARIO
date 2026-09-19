@@ -2,6 +2,11 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import type { InvoiceStatus, MovementType, Role } from "@/lib/types";
 
+// Colección de "badges" (etiquetas de color) para mostrar estados del
+// dominio de forma consistente en toda la app: estado de factura, nivel de
+// stock, tipo de movimiento, rol de usuario y si está activo.
+
+// Verde "Emitida" / rojo "Anulada".
 export function InvoiceStatusBadge({ status }: { status: InvoiceStatus }) {
   const isCancelled = status === "ANULADA";
   return (
@@ -19,6 +24,8 @@ export function InvoiceStatusBadge({ status }: { status: InvoiceStatus }) {
   );
 }
 
+// Muestra la cantidad en stock, resaltada en ámbar si está en o por debajo
+// del mínimo configurado para ese producto.
 export function StockBadge({ stock, minStock }: { stock: number; minStock: number }) {
   const isLow = stock <= minStock;
   return (
@@ -42,6 +49,7 @@ const MOVEMENT_LABELS: Record<MovementType, string> = {
   AJUSTE: "Ajuste",
 };
 
+// Etiqueta de color por tipo de movimiento de stock (verde/rojo/azul).
 export function MovementTypeBadge({ type }: { type: MovementType }) {
   const styles: Record<MovementType, string> = {
     ENTRADA: "border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
@@ -55,6 +63,7 @@ export function MovementTypeBadge({ type }: { type: MovementType }) {
   );
 }
 
+// Etiqueta de rol (Administrador/Vendedor) usada en la tabla de Usuarios.
 export function RoleBadge({ role }: { role: Role }) {
   const isAdmin = role === "ADMIN";
   return (
@@ -72,6 +81,7 @@ export function RoleBadge({ role }: { role: Role }) {
   );
 }
 
+// Activo/Inactivo — usado para usuarios desactivados (no pueden iniciar sesión).
 export function ActiveBadge({ active }: { active: boolean }) {
   return (
     <Badge

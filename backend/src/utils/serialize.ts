@@ -1,5 +1,10 @@
+// Se llama justo antes de mandar cualquier respuesta que incluya un modelo
+// de Prisma (usuarios, productos, facturas...): `res.json(serialize(data))`.
+// Es la última barrera antes de que un dato salga por HTTP.
 import { Prisma } from "@prisma/client";
 
+// Campos que jamás deben viajar al cliente, sin importar en qué objeto
+// aparezcan (aunque venga anidado dentro de una relación incluida).
 const SENSITIVE_KEYS = new Set(["passwordHash", "tokenHash"]);
 
 /**

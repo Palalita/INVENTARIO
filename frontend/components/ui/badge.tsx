@@ -1,3 +1,5 @@
+// Etiqueta base del design system (shadcn/ui), variantes de color via cva.
+// Usada por los badges de negocio en components/common/status-badge.tsx.
 import { mergeProps } from "@base-ui/react/merge-props"
 import { useRender } from "@base-ui/react/use-render"
 import { cva, type VariantProps } from "class-variance-authority"

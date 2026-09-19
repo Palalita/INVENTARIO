@@ -13,6 +13,7 @@ export interface ClientFilters {
   pageSize?: number;
 }
 
+// Lista paginada de clientes, con búsqueda por nombre/NIT.
 export function useClients(filters: ClientFilters) {
   return useQuery({
     queryKey: ["clients", filters],
@@ -30,6 +31,7 @@ export function useClients(filters: ClientFilters) {
   });
 }
 
+// Crea un cliente nuevo.
 export function useCreateClient() {
   const queryClient = useQueryClient();
   return useMutation({
@@ -41,6 +43,7 @@ export function useCreateClient() {
   });
 }
 
+// Actualiza los datos de un cliente existente.
 export function useUpdateClient() {
   const queryClient = useQueryClient();
   return useMutation({
@@ -52,6 +55,7 @@ export function useUpdateClient() {
   });
 }
 
+// Elimina un cliente.
 export function useDeleteClient() {
   const queryClient = useQueryClient();
   return useMutation({

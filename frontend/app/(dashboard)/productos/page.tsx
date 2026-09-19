@@ -23,6 +23,9 @@ import { useAuthStore } from "@/lib/stores/auth-store";
 const PAGE_SIZE = 10;
 const ALL_CATEGORIES = "TODAS";
 
+// Ruta /productos: catálogo con búsqueda (debounced), filtro por categoría
+// y por stock bajo, paginado, y acciones de crear/editar/gestionar categorías
+// (visibles solo para ADMIN vía `isAdmin`).
 export default function ProductosPage() {
   const isAdmin = useAuthStore((state) => state.user?.role === "ADMIN");
   const [search, setSearch] = useState("");

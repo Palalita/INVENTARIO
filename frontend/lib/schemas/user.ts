@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+// Validación del form de crear/editar usuario (user-form-dialog.tsx, solo ADMIN).
 export const userFormSchema = z.object({
   name: z.string().min(1, "El nombre es obligatorio").max(150),
   email: z.string().email("Correo inválido"),

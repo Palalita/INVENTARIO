@@ -55,12 +55,17 @@ const MOVEMENT_TYPE_LABELS: Record<string, string> = {
   AJUSTE: "Ajuste",
 };
 
+// Modal con dos pestañas: registrar un movimiento de stock manual (entrada/
+// salida/ajuste — "ajuste" solo lo puede elegir un ADMIN) y ver el historial
+// paginado de movimientos de ese producto.
 export function StockMovementDialog({ product, trigger }: StockMovementDialogProps) {
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState("movimiento");
   const [page, setPage] = useState(1);
   const role = useAuthStore((state) => state.user?.role);
 
+  // `open ? product.id : undefined` evita pedir el historial mientras el
+  // modal está cerrado (useStockMovements no dispara la query si es undefined).
   const history = useStockMovements(open ? product.id : undefined, page);
   const createMovement = useCreateStockMovement(product.id);
 
@@ -76,6 +81,8 @@ export function StockMovementDialog({ product, trigger }: StockMovementDialogPro
     defaultValues: { type: "ENTRADA", quantity: 1, reason: "" },
   });
 
+  // Registra el movimiento y cambia a la pestaña de historial para que el
+  // usuario vea de inmediato que quedó guardado.
   async function onSubmit(values: StockMovementFormValues) {
     try {
       await createMovement.mutateAsync({

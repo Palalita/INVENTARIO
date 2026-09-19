@@ -1,5 +1,7 @@
 "use client"
 
+// Menú desplegable del design system. Usado en app-shell.tsx para el menú
+// del usuario (cerrar sesión, etc).
 import * as React from "react"
 import { Menu as MenuPrimitive } from "@base-ui/react/menu"
 import { cn } from "cn"

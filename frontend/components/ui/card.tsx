@@ -1,3 +1,5 @@
+// Contenedor base tipo "tarjeta" del design system: Card/CardHeader/
+// CardTitle/CardContent/CardFooter. Usado en el dashboard, formularios, etc.
 import * as React from "react"
 import { cn } from "cn"
 

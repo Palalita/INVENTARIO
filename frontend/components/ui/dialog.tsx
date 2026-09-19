@@ -1,5 +1,8 @@
 "use client"
 
+// Modal base del design system (shadcn/ui sobre Base UI): Dialog/Trigger/
+// Content/Header/Footer/etc. Todos los modales de la app (ProductFormDialog,
+// ClientFormDialog, ConfirmDialog...) se arman componiendo estas piezas.
 import * as React from "react"
 import { Dialog as DialogPrimitive } from "@base-ui/react/dialog"
 import { cn } from "cn"

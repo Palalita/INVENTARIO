@@ -4,6 +4,9 @@ import { useTheme } from "next-themes";
 import { Moon, Sun } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
+// Botón de la barra superior para alternar claro/oscuro. Los dos íconos
+// (sol/luna) están superpuestos y se muestran/ocultan con clases `dark:`,
+// animando la transición en vez de cambiar el ícono de golpe.
 export function ThemeToggle() {
   const { theme, setTheme } = useTheme();
 

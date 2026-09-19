@@ -8,6 +8,9 @@ interface PaginationBarProps {
   onPageChange: (page: number) => void;
 }
 
+// Barra de paginación reutilizable ("Mostrando 1-10 de 42" + Anterior/Siguiente).
+// No guarda estado propio: recibe `page` desde el padre y avisa el cambio
+// por `onPageChange`, quien decide cómo refetchear.
 export function PaginationBar({ page, pageSize, total, onPageChange }: PaginationBarProps) {
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
 

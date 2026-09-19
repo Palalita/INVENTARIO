@@ -15,6 +15,9 @@ import { EmptyState } from "@/components/common/empty-state";
 import { formatCurrency } from "@/lib/invoice-calculations";
 import { cn } from "@/lib/utils";
 
+// Forma de una línea de factura EN EDICIÓN (antes de guardarla) — no es el
+// mismo tipo que InvoiceItem de lib/types.ts, que es cómo la devuelve la API
+// una vez creada la factura.
 export interface InvoiceLine {
   productId: string;
   name: string;
@@ -31,6 +34,10 @@ interface InvoiceLineItemsProps {
   insufficientStockIds?: Set<string>;
 }
 
+// Tabla editable de líneas de la factura que se está armando (pantalla
+// "nueva factura"): cantidad editable por fila, subtotal calculado al vuelo,
+// y resaltado en rojo si `insufficientStockIds` marca esa línea sin stock
+// suficiente (se calcula en la página, comparando contra el stock disponible).
 export function InvoiceLineItems({
   lines,
   onQuantityChange,

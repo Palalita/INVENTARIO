@@ -1,3 +1,4 @@
+// Controladores HTTP del CRUD de productos y su imagen.
 import { Request, Response } from "express";
 import { asyncHandler } from "../../utils/asyncHandler";
 import { serialize } from "../../utils/serialize";
@@ -30,6 +31,9 @@ export const deleteProduct = asyncHandler(async (req: Request, res: Response) =>
   res.status(204).send();
 });
 
+// `req.file` lo llena el middleware uploadImage("image") (multer) antes de
+// llegar aquí — ya viene validado en tamaño/tipo declarado; la validación
+// del contenido real ocurre dentro del service.
 export const uploadProductImage = asyncHandler(async (req: Request, res: Response) => {
   const product = await productsService.uploadProductImage(req.params.id, req.file as Express.Multer.File);
   res.status(200).json(serialize({ product }));

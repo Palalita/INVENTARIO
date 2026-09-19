@@ -18,6 +18,10 @@ export const metadata: Metadata = {
   description: "Sistema de inventario y facturación",
 };
 
+// Layout raíz de toda la app (envuelve absolutamente todas las rutas). Carga
+// las fuentes y monta <Providers> (React Query, tema, toasts) una sola vez.
+// `suppressHydrationWarning` es necesario porque next-themes ajusta la clase
+// `dark`/`light` del <html> en el cliente antes de la hidratación.
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html

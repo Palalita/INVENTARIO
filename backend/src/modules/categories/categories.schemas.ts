@@ -1,3 +1,6 @@
+// Esquemas de validación + tipos del módulo categories, todo en un solo
+// archivo porque el módulo es pequeño (a diferencia de users, que separa
+// tipos en users.types.ts).
 import { z } from "zod";
 
 export const createCategorySchema = z.object({

@@ -31,6 +31,10 @@ interface ClientFormDialogProps {
   initialName?: string;
 }
 
+// Modal de crear/editar cliente. Puede usarse "standalone" (con su propio
+// trigger y estado open interno) o controlado desde afuera (`open`/
+// `onOpenChange`, como hace el combobox de cliente al crear uno al vuelo
+// dentro del flujo de nueva factura — ver client-combobox.tsx).
 export function ClientFormDialog({
   client,
   trigger,
@@ -57,6 +61,8 @@ export function ClientFormDialog({
     defaultValues: { name: "", nit: "", email: "", phone: "", address: "" },
   });
 
+  // Al abrir el modal, carga los datos del cliente a editar (o los valores
+  // por defecto/`initialName` si es uno nuevo).
   useEffect(() => {
     if (open) {
       reset({
@@ -71,6 +77,9 @@ export function ClientFormDialog({
 
   const isSubmitting = createClient.isPending || updateClient.isPending;
 
+  // Crea o actualiza el cliente según `isEdit`, cierra el modal, y en modo
+  // creación avisa al padre (`onSuccess`) con el cliente recién creado —
+  // usado para autoseleccionarlo en el combobox de factura nueva.
   async function onSubmit(values: ClientFormValues) {
     const payload = {
       name: values.name,

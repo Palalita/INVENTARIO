@@ -15,6 +15,8 @@ export interface InvoiceFilters {
   pageSize?: number;
 }
 
+// Lista paginada de facturas, filtrable por rango de fechas y estado
+// (EMITIDA/ANULADA/TODAS).
 export function useInvoices(filters: InvoiceFilters) {
   return useQuery({
     queryKey: ["invoices", filters],
@@ -34,6 +36,7 @@ export function useInvoices(filters: InvoiceFilters) {
   });
 }
 
+// Detalle de una factura puntual (usado en la pantalla de ver factura).
 export function useInvoice(id: string | undefined) {
   return useQuery({
     queryKey: ["invoice", id],
@@ -45,6 +48,9 @@ export function useInvoice(id: string | undefined) {
   });
 }
 
+// Crea una factura (el backend descuenta stock y calcula subtotal/impuesto/
+// total). Invalida facturas, productos (cambió el stock) y el resumen del
+// dashboard (cambian las ventas del día/mes).
 export function useCreateInvoice() {
   const queryClient = useQueryClient();
   return useMutation({
@@ -60,6 +66,7 @@ export function useCreateInvoice() {
   });
 }
 
+// Anula una factura (el backend repone el stock de los productos vendidos).
 export function useCancelInvoice() {
   const queryClient = useQueryClient();
   return useMutation({
@@ -76,6 +83,9 @@ export function useCancelInvoice() {
   });
 }
 
+// Descarga el PDF de una factura: pide el binario a la API (responseType
+// "blob"), arma un link temporal con un Object URL, lo "clickea" desde JS
+// para que el navegador dispare la descarga, y limpia todo después.
 export async function downloadInvoicePdf(id: string, invoiceNumber: number) {
   const response = await api.get(`/invoices/${id}/pdf`, { responseType: "blob" });
   const url = window.URL.createObjectURL(new Blob([response.data]));

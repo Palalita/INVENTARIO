@@ -17,6 +17,9 @@ export interface ProductFilters {
   pageSize?: number;
 }
 
+// Lista paginada de productos, con búsqueda/filtro por categoría/stock bajo.
+// `placeholderData` mantiene la página anterior visible mientras carga la
+// nueva (evita el parpadeo al cambiar de página o escribir en el buscador).
 export function useProducts(filters: ProductFilters) {
   return useQuery({
     queryKey: ["products", filters],
@@ -36,6 +39,8 @@ export function useProducts(filters: ProductFilters) {
   });
 }
 
+// Crea un producto. Al terminar, invalida la caché de "products" para que
+// la tabla se refresque sola con el nuevo producto incluido.
 export function useCreateProduct() {
   const queryClient = useQueryClient();
   return useMutation({
@@ -49,6 +54,7 @@ export function useCreateProduct() {
   });
 }
 
+// Actualiza campos de un producto existente (nombre, precio, categoría, etc).
 export function useUpdateProduct() {
   const queryClient = useQueryClient();
   return useMutation({
@@ -62,6 +68,7 @@ export function useUpdateProduct() {
   });
 }
 
+// Borra (soft-delete en el backend, marca `active: false`) un producto.
 export function useDeleteProduct() {
   const queryClient = useQueryClient();
   return useMutation({
@@ -74,6 +81,8 @@ export function useDeleteProduct() {
   });
 }
 
+// Sube la imagen de un producto ya existente (multipart/form-data). El
+// backend la guarda en Cloudflare R2 y devuelve el producto con `imageUrl`.
 export function useUploadProductImage() {
   const queryClient = useQueryClient();
   return useMutation({
@@ -89,6 +98,7 @@ export function useUploadProductImage() {
   });
 }
 
+// Quita la imagen de un producto (borra el archivo en R2 del lado del backend).
 export function useDeleteProductImage() {
   const queryClient = useQueryClient();
   return useMutation({
@@ -102,6 +112,8 @@ export function useDeleteProductImage() {
   });
 }
 
+// Historial paginado de movimientos de stock (entradas/salidas/ajustes) de
+// un producto. `enabled` evita disparar la query si aún no hay productId.
 export function useStockMovements(productId: string | undefined, page: number) {
   return useQuery({
     queryKey: ["stock-movements", productId, page],
@@ -117,6 +129,9 @@ export function useStockMovements(productId: string | undefined, page: number) {
   });
 }
 
+// Registra un movimiento de stock manual (ENTRADA/SALIDA/AJUSTE). Invalida
+// tanto el historial de movimientos como la lista de productos, porque esto
+// cambia el `stock` mostrado en la tabla.
 export function useCreateStockMovement(productId: string | undefined) {
   const queryClient = useQueryClient();
   return useMutation({

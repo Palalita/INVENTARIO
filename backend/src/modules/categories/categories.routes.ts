@@ -7,6 +7,9 @@ import * as categoriesController from "./categories.controller";
 
 const router = Router();
 
+// Cualquier usuario autenticado (ADMIN o VENDEDOR) puede leer categorías —
+// las necesita, por ejemplo, para el formulario de producto. Solo crear,
+// editar y borrar están restringidos a ADMIN, ruta por ruta.
 router.use(requireAuth);
 
 router.get("/", categoriesController.listCategories);

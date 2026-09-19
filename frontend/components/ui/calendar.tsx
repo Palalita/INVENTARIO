@@ -1,5 +1,9 @@
 "use client"
 
+// Selector de fecha (calendario visual) basado en react-day-picker. No se ve
+// usado activamente en las pantallas actuales del proyecto, pero queda
+// disponible en el design system por si se agrega un filtro de fecha con
+// calendario en vez de inputs de texto.
 import * as React from "react"
 import { cn } from "cn"
 import {

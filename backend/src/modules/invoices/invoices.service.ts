@@ -1,3 +1,8 @@
+// El módulo más sensible del backend: crear/anular una factura mueve stock
+// de verdad y calcula dinero (subtotal/impuesto/total), así que ambas
+// operaciones corren dentro de una transacción de Prisma — o se completa
+// todo (factura + líneas + stock actualizado + movimientos registrados), o
+// no se completa nada.
 import { InvoiceStatus, MovementType, Prisma, Role } from "@prisma/client";
 import { prisma } from "../../config/prisma";
 import { env } from "../../config/env";
@@ -5,6 +10,10 @@ import { AppError } from "../../utils/AppError";
 import { getPaginationArgs, buildPaginatedResponse } from "../../utils/pagination";
 import { CreateInvoiceInput, ListInvoicesQuery } from "./invoices.schemas";
 
+// Relaciones que casi siempre hacen falta al devolver una factura completa:
+// el cliente, quién la emitió, quién la anuló (si aplica), y sus líneas con
+// el producto de cada una. Se define una sola vez y se reusa en las tres
+// funciones que devuelven facturas completas.
 const invoiceInclude = {
   client: true,
   user: { select: { id: true, name: true, email: true, role: true } },
@@ -17,6 +26,10 @@ interface RequestingUser {
   role: Role;
 }
 
+// Lista paginada de facturas, con filtro opcional por estado y rango de
+// fechas. Aplica "scoping" por rol: un VENDEDOR solo ve las facturas que él
+// mismo emitió, un ADMIN las ve todas — la misma regla se repite en
+// dashboard.service.ts para mantener consistentes los reportes.
 export async function listInvoices(query: ListInvoicesQuery, requester: RequestingUser) {
   const { skip, take, page, pageSize } = getPaginationArgs(query);
 
@@ -53,6 +66,12 @@ export async function getInvoiceById(id: string) {
   return invoice;
 }
 
+// Crea una factura completa: valida stock, calcula montos con precisión
+// decimal exacta (Prisma.Decimal, nunca `number` normal — evita errores de
+// redondeo de punto flotante en dinero), descuenta el stock y deja un
+// registro de movimiento por cada producto vendido. Todo en una sola
+// transacción: si el stock resulta insuficiente a mitad de proceso, nada de
+// esto se guarda.
 export async function createInvoice(userId: string, input: CreateInvoiceInput) {
   return prisma.$transaction(async (tx) => {
     // Consolida cantidades si el mismo producto aparece más de una vez.
@@ -61,6 +80,9 @@ export async function createInvoice(userId: string, input: CreateInvoiceInput) {
       quantitiesByProduct.set(item.productId, (quantitiesByProduct.get(item.productId) ?? 0) + item.quantity);
     }
 
+    // Una sola consulta para todos los productos involucrados (en vez de una
+    // por línea de factura), para no hacer N queries si la factura tiene N
+    // líneas distintas.
     const products = await tx.product.findMany({
       where: { id: { in: [...quantitiesByProduct.keys()] } }
     });
@@ -70,6 +92,9 @@ export async function createInvoice(userId: string, input: CreateInvoiceInput) {
     const insufficient: Array<{ productId: string; available: number; requested: number }> = [];
     const notFound: string[] = [];
 
+    // Primero se valida TODO (todos los productos existen/están activos, y
+    // hay stock suficiente de cada uno) antes de escribir nada — evita dejar
+    // la factura a medias si el segundo producto de la lista falla.
     for (const [productId, requested] of quantitiesByProduct.entries()) {
       const product = productsById.get(productId);
       if (!product || !product.active) {
@@ -97,6 +122,10 @@ export async function createInvoice(userId: string, input: CreateInvoiceInput) {
       throw AppError.badRequest("Cliente no encontrado", "CLIENT_NOT_FOUND");
     }
 
+    // El precio unitario de cada línea se toma del producto EN ESTE
+    // MOMENTO (no del que mande el cliente en el request) — así una factura
+    // vieja no cambia de precio si el producto se reprecia después, y nadie
+    // puede facturar a un precio manipulado desde el frontend.
     let subtotal = new Prisma.Decimal(0);
     const itemsData = input.items.map((item) => {
       const product = productsById.get(item.productId)!;
@@ -110,9 +139,14 @@ export async function createInvoice(userId: string, input: CreateInvoiceInput) {
       };
     });
 
+    // El impuesto se calcula sobre el subtotal ya sumado, con la tasa
+    // configurada en TAX_RATE (env), no una tasa fija en el código — así se
+    // puede ajustar sin tocar código si cambia la ley tributaria.
     const tax = subtotal.mul(env.TAX_RATE);
     const total = subtotal.add(tax);
 
+    // `items: { create: itemsData }` crea la factura Y sus líneas
+    // (InvoiceItem) en una sola operación anidada de Prisma.
     const invoice = await tx.invoice.create({
       data: {
         clientId: input.clientId,
@@ -126,6 +160,10 @@ export async function createInvoice(userId: string, input: CreateInvoiceInput) {
       include: invoiceInclude
     });
 
+    // Recién aquí, con la factura ya creada, se descuenta el stock real y se
+    // deja un StockMovement de tipo SALIDA por cada producto — la
+    // trazabilidad de "por qué bajó el stock" queda ligada al número de
+    // factura en el campo `reason`.
     for (const [productId, requested] of quantitiesByProduct.entries()) {
       await tx.product.update({ where: { id: productId }, data: { stock: { decrement: requested } } });
       await tx.stockMovement.create({
@@ -143,6 +181,9 @@ export async function createInvoice(userId: string, input: CreateInvoiceInput) {
   });
 }
 
+// Anula una factura: NUNCA la borra (queda como registro fiscal/histórico
+// con status ANULADA), pero repone el stock de cada producto vendido y dejó
+// un StockMovement de tipo ENTRADA como reversa de la venta original.
 export async function cancelInvoice(id: string, cancelledByUserId: string) {
   return prisma.$transaction(async (tx) => {
     const invoice = await tx.invoice.findUnique({ where: { id }, include: { items: true } });

@@ -24,12 +24,16 @@ const STATUS_LABELS: Record<string, string> = {
   ANULADA: "Anulada",
 };
 
+// Ruta /facturas: historial filtrable por rango de fechas y estado, con
+// link a "Nueva factura" y al detalle de cada una.
 export default function FacturasPage() {
   const [filters, setFilters] = useState<InvoiceFilters>({ status: "TODAS" });
   const [page, setPage] = useState(1);
 
   const invoices = useInvoices({ ...filters, page, pageSize: PAGE_SIZE });
 
+  // Actualiza un filtro y vuelve a la página 1 (evita quedar en una página
+  // que ya no existe tras cambiar el filtro).
   function updateFilter<K extends keyof InvoiceFilters>(key: K, value: InvoiceFilters[K]) {
     setFilters((prev) => ({ ...prev, [key]: value }));
     setPage(1);

@@ -17,11 +17,21 @@ import clientsRoutes from "./modules/clients/clients.routes";
 import invoicesRoutes from "./modules/invoices/invoices.routes";
 import dashboardRoutes from "./modules/dashboard/dashboard.routes";
 
+// Construye y configura la app de Express (middlewares + rutas), pero no la
+// arranca (eso lo hace server.ts). Estar separada en una función permite que
+// los tests de supertest (backend/tests/*) importen la app sin abrir un
+// puerto real.
 export function createApp(): Express {
   const app = express();
 
+  // Oculta el header "X-Powered-By: Express" que delataría la tecnología
+  // usada, para no facilitarle reconocimiento a un atacante.
   app.disable("x-powered-by");
 
+  // Logging estructurado de cada request/response (pino-http). Cada request
+  // recibe un id de correlación (x-request-id) que se reusa si el cliente ya
+  // mandó uno, o se genera con randomUUID() si no. El endpoint de health
+  // check se excluye del log automático para no ensuciarlo con pings.
   app.use(
     pinoHttp({
       logger,
@@ -37,22 +47,34 @@ export function createApp(): Express {
     })
   );
 
+  // helmet: agrega varios headers HTTP de seguridad por defecto (protección
+  // contra sniffing de MIME type, clickjacking, etc.).
   app.use(helmet());
+  // CORS: solo el origen configurado en FRONTEND_URL puede llamar a esta API
+  // desde un navegador, y se permiten credenciales (cookies) en esas
+  // llamadas — necesario para que la cookie de refresh token viaje.
   app.use(
     cors({
       origin: env.FRONTEND_URL,
       credentials: true
     })
   );
+  // Parsea el body de las requests como JSON (req.body) y las cookies
+  // entrantes (req.cookies), respectivamente.
   app.use(express.json());
   app.use(cookieParser());
 
+  // Endpoint de salud sin autenticación: lo usan Railway y monitoreos
+  // externos para saber si el proceso sigue vivo.
   app.get("/health", (_req, res) => {
     res.status(200).json({ status: "ok", uptime: process.uptime() });
   });
 
+  // Rate limiting aplicado a toda la API (no al /health) para frenar abuso o
+  // fuerza bruta contra cualquier endpoint.
   app.use("/api/v1", apiRateLimiter);
 
+  // Cada módulo de negocio monta sus propias rutas bajo su prefijo REST.
   app.use("/api/v1/auth", authRoutes);
   app.use("/api/v1/users", usersRoutes);
   app.use("/api/v1/categories", categoriesRoutes);
@@ -61,6 +83,9 @@ export function createApp(): Express {
   app.use("/api/v1/invoices", invoicesRoutes);
   app.use("/api/v1/dashboard", dashboardRoutes);
 
+  // Si ninguna ruta anterior respondió, 404 estandarizado; cualquier error
+  // lanzado (o pasado a next()) por un controlador cae en errorHandler, que
+  // le da forma consistente a la respuesta de error.
   app.use(notFoundHandler);
   app.use(errorHandler);
 

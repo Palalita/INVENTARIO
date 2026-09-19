@@ -1,5 +1,7 @@
 "use client"
 
+// Componente de lista con búsqueda/filtro (basado en cmdk) — la base de los
+// combobox de la app: ProductAutocomplete y ClientCombobox.
 import * as React from "react"
 import { Command as CommandPrimitive } from "cmdk"
 import { cn } from "cn"

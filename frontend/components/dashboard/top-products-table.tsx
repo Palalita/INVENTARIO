@@ -17,6 +17,8 @@ interface TopProductsTableProps {
   isLoading: boolean;
 }
 
+// Tabla de "top 5 productos más vendidos" del dashboard, con cantidad y
+// total vendido (viene ya calculado y ordenado desde /dashboard/summary).
 export function TopProductsTable({ products, isLoading }: TopProductsTableProps) {
   return (
     <Card>

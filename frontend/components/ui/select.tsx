@@ -1,5 +1,7 @@
 "use client"
 
+// <select> estilizado del design system. Usado para Categoría, Rol, Estado,
+// Tipo de movimiento, etc. en los formularios de la app.
 import * as React from "react"
 import { Select as SelectPrimitive } from "@base-ui/react/select"
 import { cn } from "cn"

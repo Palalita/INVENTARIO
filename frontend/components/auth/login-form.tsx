@@ -13,6 +13,9 @@ interface LoginFormProps {
   isSubmitting?: boolean;
 }
 
+// Formulario de login puro (solo UI + validación): no llama a la API
+// directamente, delega el submit al padre (app/(auth)/login/page.tsx) vía
+// `onSubmit`, quien maneja la llamada real y la redirección.
 export function LoginForm({ onSubmit, isSubmitting }: LoginFormProps) {
   const {
     register,

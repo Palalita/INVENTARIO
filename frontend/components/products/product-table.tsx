@@ -32,10 +32,15 @@ interface ProductTableProps {
   isAdmin: boolean;
 }
 
+// Tabla de catálogo de productos: imagen, precio, badge de stock, y acciones
+// (movimiento de stock para cualquier rol; editar/desactivar solo ADMIN).
+// "Eliminar" en realidad desactiva (soft delete), por eso el producto sigue
+// existiendo pero se muestra atenuado (`opacity-50`) si `active` es false.
 export function ProductTable({ products, isLoading, isError, onRetry, isAdmin }: ProductTableProps) {
   const deleteProduct = useDeleteProduct();
   const [productToDelete, setProductToDelete] = useState<Product | null>(null);
 
+  // Desactiva el producto confirmado en el ConfirmDialog de abajo.
   async function handleDelete(product: Product) {
     try {
       await deleteProduct.mutateAsync(product.id);

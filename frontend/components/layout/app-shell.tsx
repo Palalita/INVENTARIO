@@ -32,6 +32,9 @@ import { logout as apiLogout } from "@/lib/api";
 import { useAuthStore } from "@/lib/stores/auth-store";
 import { cn } from "@/lib/utils";
 
+// Items del menú lateral. `adminOnly` oculta la entrada (ej. "Usuarios") si
+// el usuario logueado es VENDEDOR — solo es una comodidad de UI, el backend
+// vuelve a validar el rol en cada endpoint.
 const NAV_ITEMS = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, adminOnly: false },
   { href: "/productos", label: "Productos", icon: Package, adminOnly: false },
@@ -40,6 +43,8 @@ const NAV_ITEMS = [
   { href: "/usuarios", label: "Usuarios", icon: UserCog, adminOnly: true },
 ];
 
+// Lista de links de navegación, compartida entre el sidebar de escritorio y
+// el Sheet (menú deslizante) de móvil. Resalta el link activo según la ruta.
 function NavLinks({
   items,
   pathname,
@@ -75,6 +80,8 @@ function NavLinks({
   );
 }
 
+// Encuentra el item de navegación que corresponde a la ruta actual, para
+// mostrar su ícono/título en el header. Si no matchea ninguno, cae al primero.
 function getCurrentNavItem(pathname: string) {
   return (
     NAV_ITEMS.find((item) => pathname === item.href || pathname.startsWith(`${item.href}/`)) ??
@@ -82,6 +89,7 @@ function getCurrentNavItem(pathname: string) {
   );
 }
 
+// Saca las iniciales del nombre del usuario para el avatar (ej. "Juan Pérez" → "JP").
 function initials(name: string) {
   return name
     .split(" ")
@@ -91,6 +99,9 @@ function initials(name: string) {
     .join("");
 }
 
+// Layout compartido de todas las páginas autenticadas: sidebar de navegación
+// (colapsa a un menú deslizante en móvil), header con selector de tema y
+// menú de usuario, y el área de contenido (`children`) de cada página.
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -102,6 +113,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const currentNavItem = getCurrentNavItem(pathname);
   const CurrentIcon = currentNavItem.icon;
 
+  // Cierra sesión en el backend (invalida el refresh token) y limpia el
+  // estado local, luego manda al login.
   async function handleLogout() {
     await apiLogout();
     clearSession();

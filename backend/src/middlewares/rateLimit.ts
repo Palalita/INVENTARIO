@@ -1,3 +1,8 @@
+// Limitadores de tasa de requests (express-rate-limit), montados como
+// middleware sobre distintas rutas. apiRateLimiter se aplica globalmente en
+// app.ts; loginRateLimiter se aplica solo en auth.routes.ts sobre el
+// endpoint de login, más estricto porque es el objetivo típico de un ataque
+// de fuerza bruta de contraseñas.
 import rateLimit from "express-rate-limit";
 import { isTest } from "../config/env";
 
@@ -16,6 +21,9 @@ export const apiRateLimiter = rateLimit({
   }
 });
 
+// Límite específico y mucho más estricto (5 intentos / 15 min) solo para el
+// endpoint de login: dificulta adivinar contraseñas por fuerza bruta sin
+// afectar el uso normal del resto de la API.
 export const loginRateLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   limit: 5,

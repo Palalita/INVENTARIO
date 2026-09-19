@@ -1,5 +1,7 @@
 "use client"
 
+// Envoltorio para agrupar un input con addons (íconos, botones) pegados al
+// borde — usado dentro de components/ui/command.tsx para el buscador.
 import * as React from "react"
 import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "cn"

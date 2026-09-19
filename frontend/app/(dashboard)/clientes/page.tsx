@@ -12,6 +12,7 @@ import { useAuthStore } from "@/lib/stores/auth-store";
 
 const PAGE_SIZE = 10;
 
+// Ruta /clientes: directorio con búsqueda (debounced) y paginado.
 export default function ClientesPage() {
   const isAdmin = useAuthStore((state) => state.user?.role === "ADMIN");
   const [search, setSearch] = useState("");

@@ -2,6 +2,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import type { Category } from "@/lib/types";
 
+// Lista completa de categorías (para el <select> de categoría en el form de
+// producto). `staleTime` de 5 min porque cambian poco — evita refetch constante.
 export function useCategories() {
   return useQuery({
     queryKey: ["categories"],
@@ -13,6 +15,7 @@ export function useCategories() {
   });
 }
 
+// Crea una categoría nueva.
 export function useCreateCategory() {
   const queryClient = useQueryClient();
   return useMutation({
@@ -24,6 +27,8 @@ export function useCreateCategory() {
   });
 }
 
+// Renombra una categoría. Invalida también "products" porque las tarjetas/
+// tablas de producto muestran el nombre de categoría embebido.
 export function useUpdateCategory() {
   const queryClient = useQueryClient();
   return useMutation({
@@ -38,6 +43,7 @@ export function useUpdateCategory() {
   });
 }
 
+// Elimina una categoría (los productos que la usaban quedan sin categoría).
 export function useDeleteCategory() {
   const queryClient = useQueryClient();
   return useMutation({

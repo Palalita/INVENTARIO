@@ -2,6 +2,8 @@
 // documented in 03-architecture.md. Monetary amounts travel over the wire as decimal
 // strings (e.g. "150.00") to avoid floating point issues, per the API contract.
 
+// ── Entidades del dominio (forma en que el backend las devuelve) ──────────
+
 export type Role = "ADMIN" | "VENDEDOR";
 
 export interface User {
@@ -88,6 +90,8 @@ export interface Invoice {
   items: InvoiceItem[];
 }
 
+// ── Formas genéricas de respuesta de la API ────────────────────────────────
+
 export interface PaginatedResponse<T> {
   data: T[];
   page: number;
@@ -124,6 +128,8 @@ export interface SalesReportRow {
   invoiceCount: number;
   total: string;
 }
+
+// ── Payloads que el frontend manda al backend (crear/actualizar) ──────────
 
 export interface LoginPayload {
   email: string;

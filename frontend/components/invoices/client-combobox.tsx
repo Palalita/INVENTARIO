@@ -24,6 +24,10 @@ interface ClientComboboxProps {
   onSelect: (client: Client) => void;
 }
 
+// Selector de cliente con búsqueda para "nueva factura". Si el usuario no
+// encuentra el cliente, puede crearlo al vuelo desde la misma lista (abre
+// ClientFormDialog en modo controlado, pre-cargado con lo que escribió en la
+// búsqueda) y queda seleccionado automáticamente al crearse.
 export function ClientCombobox({ value, onSelect }: ClientComboboxProps) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");

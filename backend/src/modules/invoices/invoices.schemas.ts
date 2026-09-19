@@ -9,6 +9,11 @@ export const listInvoicesQuerySchema = z.object({
   pageSize: z.coerce.number().int().positive().max(100).default(20)
 });
 
+// Deliberadamente NO se acepta un precio por línea aquí: el cliente solo
+// manda qué producto y cuánta cantidad quiere. El precio unitario lo decide
+// el servidor (leyéndolo del producto en ese momento, ver
+// invoices.service.ts) — así nadie puede facturar a un precio distinto al
+// real manipulando el request.
 export const createInvoiceSchema = z.object({
   clientId: z.string().uuid("clientId inválido"),
   items: z

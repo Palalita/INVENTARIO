@@ -1,3 +1,8 @@
+// Error "de negocio" que cualquier capa del backend (services, controllers,
+// middlewares) puede lanzar para comunicar un fallo esperado con su código
+// HTTP correcto. `errorHandler.ts` sabe reconocer esta clase y responder
+// exactamente con statusCode/code/message/details — así el resto del código
+// no arma objetos de respuesta HTTP a mano, solo hace `throw AppError.algo(...)`.
 export class AppError extends Error {
   public statusCode: number;
   public code: string;
@@ -11,6 +16,11 @@ export class AppError extends Error {
     this.details = details;
   }
 
+  // Fábricas estáticas para los códigos HTTP más comunes, con un `code`
+  // (string estable, pensado para que el frontend pueda reaccionar a un
+  // error específico) y `message` (texto legible) por defecto razonables.
+  // Usarlas (`AppError.notFound(...)`) es más corto y consistente que
+  // escribir `new AppError(404, "NOT_FOUND", ...)` en cada módulo.
   static badRequest(message: string, code = "BAD_REQUEST", details?: unknown) {
     return new AppError(400, code, message, details);
   }

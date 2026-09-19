@@ -9,6 +9,9 @@ import { login, getApiErrorMessage } from "@/lib/api";
 import { useAuthStore } from "@/lib/stores/auth-store";
 import type { LoginFormValues } from "@/lib/schemas/auth";
 
+// Ruta /login. Orquesta el submit real: llama a la API, guarda la sesión en
+// el store global, y redirige al dashboard. El form en sí (validación + UI)
+// vive en components/auth/login-form.tsx.
 export default function LoginPage() {
   const router = useRouter();
   const setSession = useAuthStore((state) => state.setSession);

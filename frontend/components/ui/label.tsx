@@ -1,5 +1,6 @@
 "use client"
 
+// Etiqueta de campo de formulario, con el estilo consistente del design system.
 import * as React from "react"
 import { cn } from "cn"
 

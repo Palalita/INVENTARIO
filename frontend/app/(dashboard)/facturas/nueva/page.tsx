@@ -15,6 +15,11 @@ import { useCreateInvoice } from "@/lib/hooks/use-invoices";
 import { calculateInvoiceTotals, formatCurrency } from "@/lib/invoice-calculations";
 import type { Client, Product } from "@/lib/types";
 
+// Ruta /facturas/nueva: arma una factura en el cliente (cliente + líneas de
+// producto) y la manda al backend de una sola vez al confirmar. El backend
+// vuelve a validar el stock al crear (por eso el manejo especial de
+// INSUFFICIENT_STOCK abajo: el stock pudo cambiar entre que se armó la
+// factura en pantalla y el momento de guardarla).
 export default function NuevaFacturaPage() {
   const router = useRouter();
   const [client, setClient] = useState<Client | null>(null);
@@ -23,11 +28,16 @@ export default function NuevaFacturaPage() {
 
   const createInvoice = useCreateInvoice();
 
+  // Recalcula subtotal/impuesto/total en el cliente en tiempo real (misma
+  // fórmula que usa el backend) para que el usuario vea el total antes de
+  // guardar; el total real y definitivo lo calcula el backend al crear.
   const totals = useMemo(
     () => calculateInvoiceTotals(lines.map((l) => ({ quantity: l.quantity, unitPrice: l.unitPrice }))),
     [lines]
   );
 
+  // Agrega un producto a la factura. Si ya estaba en la lista, suma 1 a su
+  // cantidad (topado al stock disponible) en vez de duplicar la línea.
   function handleAddProduct(product: Product) {
     setInsufficientStockIds(new Set());
     setLines((prev) => {
@@ -53,11 +63,13 @@ export default function NuevaFacturaPage() {
     });
   }
 
+  // Cambia la cantidad de una línea (el input numérico de InvoiceLineItems).
   function handleQuantityChange(productId: string, quantity: number) {
     setInsufficientStockIds(new Set());
     setLines((prev) => prev.map((l) => (l.productId === productId ? { ...l, quantity } : l)));
   }
 
+  // Quita una línea de la factura.
   function handleRemove(productId: string) {
     setLines((prev) => prev.filter((l) => l.productId !== productId));
     setInsufficientStockIds((prev) => {
@@ -67,6 +79,9 @@ export default function NuevaFacturaPage() {
     });
   }
 
+  // Envía la factura al backend. Si el backend responde INSUFFICIENT_STOCK
+  // (alguien vendió el producto en el rato que se armaba esta factura),
+  // resalta en rojo las líneas afectadas en vez de solo mostrar un toast genérico.
   async function handleSubmit() {
     if (!client || lines.length === 0) return;
 

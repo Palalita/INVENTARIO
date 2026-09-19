@@ -1,3 +1,7 @@
+// Botón base del design system (shadcn/ui + Base UI), con variantes de
+// color (default/outline/secondary/ghost/destructive/link) y tamaño
+// definidas con cva (class-variance-authority). Boilerplate vendorizado de
+// la librería — no se edita a mano salvo para agregar una variante nueva.
 import { Button as ButtonPrimitive } from "@base-ui/react/button"
 import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "cn"

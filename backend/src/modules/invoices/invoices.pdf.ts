@@ -1,7 +1,14 @@
+// Genera el PDF de una factura "al vuelo" (streaming), sin guardar ningún
+// archivo en disco ni en R2 — se arma en memoria con pdfkit y se manda
+// directo a la respuesta HTTP en cuanto se pide. Cada factura se puede
+// regenerar en cualquier momento porque los datos que necesita ya están en
+// la base de datos.
 import PDFDocument from "pdfkit";
 import { Response } from "express";
 import { Prisma } from "@prisma/client";
 
+// Forma mínima de los datos que necesita el PDF (subconjunto de lo que
+// devuelve invoices.service.ts con su `invoiceInclude`).
 interface InvoiceForPdf {
   number: number;
   status: string;
@@ -19,10 +26,16 @@ interface InvoiceForPdf {
   }>;
 }
 
+// Dibuja el PDF de la factura directamente sobre el `Response` de Express
+// (`doc.pipe(res)`): el documento se va generando y enviando por streaming
+// (chunk a chunk) a medida que pdfkit lo produce, en vez de armarlo entero
+// en memoria y mandarlo de un golpe.
 export function streamInvoicePdf(invoice: InvoiceForPdf, res: Response): void {
   const doc = new PDFDocument({ margin: 50 });
 
   res.setHeader("Content-Type", "application/pdf");
+  // "inline" (no "attachment"): el navegador intenta mostrar el PDF en una
+  // pestaña en vez de forzar la descarga.
   res.setHeader("Content-Disposition", `inline; filename=factura-${invoice.number}.pdf`);
 
   doc.pipe(res);
@@ -46,6 +59,8 @@ export function streamInvoicePdf(invoice: InvoiceForPdf, res: Response): void {
   doc.fontSize(12).text("Detalle:");
   doc.moveDown(0.5);
 
+  // pdfkit no tiene un sistema de tablas de alto nivel: cada columna se
+  // dibuja con una coordenada X fija (50, 220, 300, 360, 440), a mano.
   const tableTop = doc.y;
   doc.fontSize(10);
   doc.text("Producto", 50, tableTop);

@@ -12,6 +12,9 @@ import * as clientsController from "./clients.controller";
 
 const router = Router();
 
+// Leer, crear y editar clientes: cualquier usuario autenticado (lo necesita
+// un VENDEDOR para facturar). Solo borrar está restringido a ADMIN, porque
+// es la única operación irreversible del módulo.
 router.use(requireAuth);
 
 router.get("/", validate({ query: listClientsQuerySchema }), clientsController.listClients);

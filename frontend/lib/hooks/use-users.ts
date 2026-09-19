@@ -2,6 +2,10 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import type { CreateUserPayload, PaginatedResponse, UpdateUserPayload, User } from "@/lib/types";
 
+// Hooks para /users — gestión de usuarios del sistema (empleados). Solo
+// tiene sentido para ADMIN; el backend rechaza estas rutas para VENDEDOR.
+
+// Lista paginada de usuarios.
 export function useUsers(params: { page: number; pageSize?: number }) {
   return useQuery({
     queryKey: ["users", params],
@@ -15,6 +19,7 @@ export function useUsers(params: { page: number; pageSize?: number }) {
   });
 }
 
+// Crea un usuario nuevo (define su email, password inicial y rol).
 export function useCreateUser() {
   const queryClient = useQueryClient();
   return useMutation({
@@ -26,6 +31,8 @@ export function useCreateUser() {
   });
 }
 
+// Actualiza un usuario: nombre, rol, o activarlo/desactivarlo (desactivarlo
+// le impide iniciar sesión sin borrar su historial).
 export function useUpdateUser() {
   const queryClient = useQueryClient();
   return useMutation({

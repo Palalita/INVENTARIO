@@ -1,3 +1,7 @@
+// Carga y valida las variables de entorno una sola vez al arrancar el
+// proceso. Cualquier otro archivo del backend que necesite una env var la
+// importa desde aquí (`import { env } from "./config/env"`) en vez de leer
+// `process.env` directamente, así el tipo y la validación quedan centralizados.
 import path from "path";
 import dotenv from "dotenv";
 import { z } from "zod";
@@ -13,6 +17,9 @@ const rawNodeEnv = process.env.NODE_ENV || "development";
 const envFile = rawNodeEnv === "test" ? ".env.test" : ".env";
 dotenv.config({ path: path.resolve(__dirname, "../../", envFile), override: true });
 
+// Forma esperada de las variables de entorno, con valores por defecto para
+// desarrollo local. Si falta una requerida (sin default), el proceso no
+// arranca — mejor fallar rápido al inicio que a medias en producción.
 const envSchema = z.object({
   PORT: z.coerce.number().default(4000),
   NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
@@ -40,6 +47,9 @@ if (!parsed.success) {
   throw new Error("Configuración de entorno inválida");
 }
 
+// `env` ya viene tipado y validado; `isProduction`/`isTest` son atajos que
+// se usan en todo el proyecto para ramificar comportamiento (ej. cookies
+// `secure`, seeds que rechazan contraseñas por defecto, etc.).
 export const env = parsed.data;
 export const isProduction = env.NODE_ENV === "production";
 export const isTest = env.NODE_ENV === "test";

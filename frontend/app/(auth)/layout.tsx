@@ -1,5 +1,7 @@
 import { Boxes } from "lucide-react";
 
+// Layout del grupo de rutas (auth) — hoy solo /login. Panel izquierdo
+// decorativo (oculto en pantallas chicas) + el formulario a la derecha.
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex min-h-screen w-full">

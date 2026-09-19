@@ -1,5 +1,8 @@
 import { z } from "zod";
 
+// `lowStock` llega como el string "true"/"false" en la query (nunca un
+// boolean real en una URL), por eso se acepta ese literal exacto y se
+// transforma a boolean real para el resto del código.
 export const listProductsQuerySchema = z.object({
   search: z.string().trim().optional(),
   categoryId: z.string().uuid().optional(),
@@ -11,6 +14,9 @@ export const listProductsQuerySchema = z.object({
   pageSize: z.coerce.number().int().positive().max(100).default(20)
 });
 
+// `cost` (costo de compra, para calcular margen) y `stock`/`minStock` tienen
+// default 0: se puede dar de alta un producto sin existencias todavía y
+// ajustarlas después vía stock-movements.
 export const createProductSchema = z.object({
   sku: z.string().min(1, "El SKU es requerido"),
   name: z.string().min(1, "El nombre es requerido"),

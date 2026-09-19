@@ -1,3 +1,5 @@
+// Controladores HTTP del CRUD de clientes — mismo patrón fino (req → service
+// → serialize) que el resto de módulos.
 import { Request, Response } from "express";
 import { asyncHandler } from "../../utils/asyncHandler";
 import { serialize } from "../../utils/serialize";

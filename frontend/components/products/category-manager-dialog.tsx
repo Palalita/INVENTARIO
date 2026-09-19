@@ -24,6 +24,10 @@ import {
 } from "@/lib/hooks/use-categories";
 import type { Category } from "@/lib/types";
 
+// Modal de administración de categorías: crear, renombrar inline (edición
+// en la misma fila) y eliminar. Es autocontenido — no recibe props, hace su
+// propio fetch de categorías vía useCategories(). Se abre desde la página
+// de Productos con el botón "Categorías".
 export function CategoryManagerDialog() {
   const [open, setOpen] = useState(false);
   const [newName, setNewName] = useState("");
@@ -36,6 +40,7 @@ export function CategoryManagerDialog() {
   const updateCategory = useUpdateCategory();
   const deleteCategory = useDeleteCategory();
 
+  // Crea la categoría escrita en el input de arriba (o no hace nada si está vacío).
   async function handleCreate() {
     const name = newName.trim();
     if (!name) return;
@@ -48,11 +53,13 @@ export function CategoryManagerDialog() {
     }
   }
 
+  // Activa el modo edición inline para una categoría (reemplaza su texto por un input).
   function startEdit(category: Category) {
     setEditingId(category.id);
     setEditingName(category.name);
   }
 
+  // Guarda el nuevo nombre de la categoría en edición.
   async function saveEdit() {
     const name = editingName.trim();
     if (!editingId || !name) return;
@@ -65,6 +72,7 @@ export function CategoryManagerDialog() {
     }
   }
 
+  // Elimina la categoría confirmada en el ConfirmDialog de abajo.
   async function handleDelete(category: Category) {
     try {
       await deleteCategory.mutateAsync(category.id);

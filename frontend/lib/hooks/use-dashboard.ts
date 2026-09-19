@@ -2,6 +2,10 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import type { DashboardSummary, SalesReportRow } from "@/lib/types";
 
+// KPIs del dashboard: ventas de hoy/mes, facturas del mes, productos con
+// stock bajo y top 5 productos más vendidos. Se refresca solo cada 5 min
+// para que los números no queden desactualizados si el usuario deja la
+// pestaña abierta mucho tiempo.
 export function useDashboardSummary() {
   return useQuery({
     queryKey: ["dashboard-summary"],
@@ -13,6 +17,8 @@ export function useDashboardSummary() {
   });
 }
 
+// Serie de ventas por día en un rango de fechas — alimenta el gráfico de
+// barras "Ventas — últimos 14 días" del dashboard.
 export function useSalesReport(from: string, to: string) {
   return useQuery({
     queryKey: ["sales-report", from, to],

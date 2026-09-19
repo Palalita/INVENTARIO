@@ -19,6 +19,9 @@ import * as movementsController from "../stock-movements/stock-movements.control
 
 const router = Router();
 
+// Leer productos y sus movimientos de stock: cualquier usuario autenticado
+// (un VENDEDOR los necesita para armar facturas). Crear, editar, borrar y
+// gestionar la imagen son operaciones exclusivas de ADMIN.
 router.use(requireAuth);
 
 router.get("/", validate({ query: listProductsQuerySchema }), productsController.listProducts);
@@ -42,6 +45,9 @@ router.delete(
   productsController.deleteProduct
 );
 
+// uploadImage("image") corre DESPUÉS de validar los params (para no
+// procesar un archivo de un id inválido) y ANTES del controlador: deja el
+// archivo ya parseado en req.file.
 router.post(
   "/:id/image",
   requireRole(Role.ADMIN),
@@ -56,6 +62,11 @@ router.delete(
   productsController.deleteProductImage
 );
 
+// Movimientos de stock anidados bajo /products/:id/movements — viven en su
+// propio módulo (stock-movements) pero se montan aquí porque su URL
+// pertenece al recurso "producto". Listar movimientos no requiere ser
+// ADMIN (a diferencia de products.routes en general) porque un VENDEDOR
+// también puede registrar/ver ajustes de stock.
 router.get(
   "/:id/movements",
   validate({ params: productIdParamSchema, query: listMovementsQuerySchema }),

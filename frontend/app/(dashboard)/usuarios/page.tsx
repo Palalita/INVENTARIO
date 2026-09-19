@@ -10,6 +10,8 @@ import { useAuthStore } from "@/lib/stores/auth-store";
 
 const PAGE_SIZE = 10;
 
+// Ruta /usuarios: gestión de cuentas del sistema, envuelta en RequireAdmin
+// (un VENDEDOR que entre directo a esta URL es redirigido a /dashboard).
 export default function UsuariosPage() {
   const [page, setPage] = useState(1);
   const currentUserId = useAuthStore((state) => state.user?.id);

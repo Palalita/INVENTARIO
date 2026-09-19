@@ -12,6 +12,8 @@ interface AuthState {
   setBootstrapping: (value: boolean) => void;
 }
 
+// Store global (Zustand) con la sesión del usuario actual: quién es y su
+// access token. Cualquier componente puede leerlo con useAuthStore(selector).
 // Session lives in memory only, as required by 02-prd.md: the refresh token is the
 // long-lived credential and lives in an httpOnly cookie managed by the backend.
 export const useAuthStore = create<AuthState>((set) => ({
@@ -24,6 +26,8 @@ export const useAuthStore = create<AuthState>((set) => ({
   setBootstrapping: (value) => set({ isBootstrapping: value }),
 }));
 
+// Lee el access token actual fuera de un componente React (ej. desde el
+// interceptor de axios en lib/api.ts, donde no se puede usar el hook).
 export function getAccessToken(): string | null {
   return useAuthStore.getState().accessToken;
 }

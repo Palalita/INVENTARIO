@@ -1,3 +1,5 @@
+// <textarea> estilizado — usado para Descripción de producto, Motivo del
+// movimiento de stock, etc.
 import * as React from "react"
 import { cn } from "cn"
 

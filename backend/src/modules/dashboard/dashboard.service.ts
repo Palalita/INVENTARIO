@@ -1,3 +1,6 @@
+// KPIs del dashboard (ventas de hoy/mes, productos con stock bajo, top 5
+// productos) y el reporte de ventas por rango de fechas (exportable a CSV).
+// Todo de solo lectura — este módulo nunca modifica datos, solo los agrega.
 import { InvoiceStatus, Prisma, Role } from "@prisma/client";
 import { prisma } from "../../config/prisma";
 import { SalesReportQuery } from "./dashboard.schemas";
@@ -27,6 +30,9 @@ function startOfMonth(): Date {
   return new Date(firstOfMonth.getTime() - BUSINESS_UTC_OFFSET_MS);
 }
 
+// Misma regla de scoping que invoices.service.ts: un VENDEDOR solo ve sus
+// propias ventas en el dashboard; un ADMIN ve las de todos (objeto de
+// filtro vacío = sin restricción adicional).
 function userScopeWhere(requester: RequestingUser): Prisma.InvoiceWhereInput {
   return requester.role === Role.VENDEDOR ? { userId: requester.id } : {};
 }
@@ -39,6 +45,11 @@ function startOfLocalDay(dateStr: string, addDays = 0): Date {
   return new Date(midnightAsUtc.getTime() - BUSINESS_UTC_OFFSET_MS);
 }
 
+// Arma todos los KPIs de la pantalla principal del dashboard en un solo
+// viaje: ventas de hoy, ventas del mes, cantidad de facturas del mes,
+// productos con stock bajo, y los 5 productos más vendidos. Las 5 queries
+// corren en paralelo (Promise.all) porque son independientes entre sí — no
+// hay razón para esperarlas una por una.
 export async function getSummary(requester: RequestingUser) {
   const scope = userScopeWhere(requester);
 
@@ -54,6 +65,11 @@ export async function getSummary(requester: RequestingUser) {
     prisma.invoice.count({
       where: { ...scope, status: InvoiceStatus.EMITIDA, createdAt: { gte: startOfMonth() } }
     }),
+    // Prisma no permite comparar dos columnas de la misma fila directamente
+    // en un `where` (`stock <= minStock`) con su API normal, así que se
+    // resuelve con SQL crudo para obtener los ids, y luego una consulta
+    // normal de Prisma (con su `include`/tipado) para traer los productos
+    // completos con esos ids.
     prisma.$queryRaw<Array<{ id: string }>>`
       SELECT id FROM "Product" WHERE active = true AND stock <= "minStock" ORDER BY stock ASC LIMIT 100
     `.then(async (rows) => {
@@ -61,6 +77,9 @@ export async function getSummary(requester: RequestingUser) {
       if (ids.length === 0) return [];
       return prisma.product.findMany({ where: { id: { in: ids } }, orderBy: { stock: "asc" } });
     }),
+    // Suma cantidades y montos vendidos por producto, agrupando todas las
+    // líneas de factura (`InvoiceItem`) de todas las facturas emitidas, y se
+    // queda con los 5 productos con más unidades vendidas.
     prisma.invoiceItem.groupBy({
       by: ["productId"],
       where: { invoice: { ...scope, status: InvoiceStatus.EMITIDA } },
@@ -70,6 +89,9 @@ export async function getSummary(requester: RequestingUser) {
     })
   ]);
 
+  // `groupBy` solo devuelve el productId y los agregados, no el resto de
+  // datos del producto (nombre, sku) — se hace una segunda consulta para
+  // completarlos y se unen en memoria con un Map.
   const productIds = topProductsRaw.map((t) => t.productId);
   const products = await prisma.product.findMany({ where: { id: { in: productIds } } });
   const productsById = new Map(products.map((p) => [p.id, p]));
@@ -97,6 +119,8 @@ export async function getSummary(requester: RequestingUser) {
   };
 }
 
+// Detalle de ventas en un rango de fechas, usado tanto para la gráfica
+// "últimos 14 días" del dashboard como para el reporte exportable a CSV.
 export async function getSalesReport(query: SalesReportQuery, requester: RequestingUser) {
   const where: Prisma.InvoiceWhereInput = { ...userScopeWhere(requester), status: InvoiceStatus.EMITIDA };
 
@@ -129,6 +153,10 @@ export async function getSalesReport(query: SalesReportQuery, requester: Request
   }));
 }
 
+// Convierte filas de getSalesReport a texto CSV, escapando comillas dobles
+// y envolviendo cada valor entre comillas (así una coma dentro de un nombre
+// de cliente no rompe las columnas). Usado por el endpoint
+// /dashboard/sales-report cuando se pide `?format=csv`.
 export function toCsv(rows: Array<Record<string, unknown>>): string {
   if (rows.length === 0) return "number,date,client,itemCount,subtotal,tax,total\n";
   const headers = Object.keys(rows[0]);

@@ -1,3 +1,4 @@
+// Placeholder "pulsante" gris para estados de carga (tablas, KPIs, gráfico).
 import { cn } from "cn"
 
 function Skeleton({ className, ...props }: React.ComponentProps<"div">) {

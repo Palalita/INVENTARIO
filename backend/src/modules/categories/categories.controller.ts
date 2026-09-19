@@ -1,3 +1,5 @@
+// Controladores HTTP del CRUD de categorías — el patrón se repite en todos
+// los módulos: recibir req, llamar al service, serializar la respuesta.
 import { Request, Response } from "express";
 import { asyncHandler } from "../../utils/asyncHandler";
 import { serialize } from "../../utils/serialize";

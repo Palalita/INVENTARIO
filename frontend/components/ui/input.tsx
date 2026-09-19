@@ -1,3 +1,5 @@
+// Input de texto base del design system. Todos los campos de los forms
+// (react-hook-form) lo usan vía {...register("campo")}.
 import * as React from "react"
 import { Input as InputPrimitive } from "@base-ui/react/input"
 import { cn } from "cn"

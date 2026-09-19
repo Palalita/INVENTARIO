@@ -1,5 +1,7 @@
 "use client"
 
+// Variante de Dialog pensada para confirmaciones (no se cierra al hacer clic
+// afuera, por diseño). Es la base de components/confirm-dialog.tsx.
 import * as React from "react"
 import { AlertDialog as AlertDialogPrimitive } from "@base-ui/react/alert-dialog"
 import { cn } from "cn"

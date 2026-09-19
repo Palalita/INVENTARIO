@@ -27,6 +27,8 @@ interface InvoiceTableProps {
   onRetry: () => void;
 }
 
+// Tabla de facturas (solo lectura, sin editar/borrar — una factura emitida
+// no se modifica, se anula). El botón de ojo navega al detalle de la factura.
 export function InvoiceTable({ invoices, isLoading, isError, onRetry }: InvoiceTableProps) {
   if (isError) {
     return <ErrorState message="No se pudieron cargar las facturas" onRetry={onRetry} />;

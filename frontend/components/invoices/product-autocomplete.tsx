@@ -27,6 +27,10 @@ interface ProductAutocompleteProps {
   excludeIds?: string[];
 }
 
+// Buscador de productos con autocompletado (usado en "nueva factura" para
+// agregar líneas). Busca en el backend con debounce de 300ms, excluye
+// productos ya agregados (`excludeIds`) e inactivos, y deshabilita los que
+// no tienen stock.
 export function ProductAutocomplete({ onSelect, excludeIds = [] }: ProductAutocompleteProps) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");

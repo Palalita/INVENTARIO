@@ -1,3 +1,6 @@
+// Esquema de base de datos (fuente de verdad del modelo de datos). Prisma
+// genera el cliente TypeScript tipado (`@prisma/client`) a partir de este
+// archivo, y las migraciones en prisma/migrations/ a partir de sus cambios.
 generator client {
   provider = "prisma-client-js"
 }
@@ -7,42 +10,63 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+/// Rol de un usuario del sistema. ADMIN ve/gestiona todo (incluida la
+/// sección de Usuarios y anular facturas); VENDEDOR opera productos,
+/// clientes y facturas pero con alcance limitado a lo suyo en reportes.
 enum Role {
   ADMIN
   VENDEDOR
 }
 
+/// Tipo de movimiento de inventario. ENTRADA y AJUSTE suman al stock,
+/// SALIDA resta (ver stock-movements.service.ts para la convención exacta).
 enum MovementType {
   ENTRADA
   SALIDA
   AJUSTE
 }
 
+/// Estado de una factura. Nunca se borra una factura: cuando se anula, pasa
+/// a ANULADA pero el registro permanece (es un documento fiscal/histórico).
 enum InvoiceStatus {
   EMITIDA
   ANULADA
 }
 
+/// Un trabajador con acceso al sistema (admin o vendedor) — no confundir con
+/// Client, que es a quien se le factura.
 model User {
-  id            String          @id @default(uuid())
-  name          String
-  email         String          @unique
-  passwordHash  String
-  role          Role            @default(VENDEDOR)
-  active        Boolean         @default(true)
-  createdAt     DateTime        @default(now())
-  invoices      Invoice[]
-  cancelledInvoices Invoice[]   @relation("InvoiceCancelledBy")
-  movements     StockMovement[]
-  refreshTokens RefreshToken[]
+  id                String          @id @default(uuid())
+  name              String
+  email             String          @unique
+  /// Hash de bcrypt, nunca la contraseña en texto plano. Se excluye a mano
+  /// de cualquier respuesta HTTP (ver utils/serialize.ts).
+  passwordHash      String
+  role              Role            @default(VENDEDOR)
+  /// Desactivar un usuario (en vez de borrarlo) le impide iniciar sesión
+  /// pero conserva su historial de facturas/movimientos vinculado.
+  active            Boolean         @default(true)
+  createdAt         DateTime        @default(now())
+  invoices          Invoice[]
+  /// Facturas que este usuario anuló (no necesariamente las que emitió).
+  cancelledInvoices Invoice[]       @relation("InvoiceCancelledBy")
+  movements         StockMovement[]
+  refreshTokens     RefreshToken[]
 }
 
+/// Sesiones activas (refresh tokens) de los usuarios. Cada login/refresh
+/// crea una fila nueva; nunca se sobreescribe una existente (rotación, ver
+/// auth.service.ts).
 model RefreshToken {
   id        String   @id @default(uuid())
   userId    String
   user      User     @relation(fields: [userId], references: [id])
+  /// HMAC-SHA256 del token real que tiene el navegador — el valor original
+  /// nunca se guarda (ver hashRefreshToken() en auth.service.ts).
   tokenHash String
   expiresAt DateTime
+  /// true una vez que este token fue canjeado por uno nuevo (refresh) o el
+  /// usuario cerró sesión — un token revocado no puede volver a usarse.
   revoked   Boolean  @default(false)
   createdAt DateTime @default(now())
 
@@ -50,24 +74,38 @@ model RefreshToken {
   @@index([tokenHash])
 }
 
+/// Categoría de producto (ej. "Electrónica", "Oficina"). Relación opcional
+/// con Product: un producto puede no tener categoría asignada.
 model Category {
   id       String    @id @default(uuid())
   name     String    @unique
   products Product[]
 }
 
+/// Un artículo del catálogo/inventario.
 model Product {
   id           String          @id @default(uuid())
+  /// Código interno del negocio (no autogenerado) — identificador de
+  /// negocio, único, distinto del `id` técnico.
   sku          String          @unique
   name         String
   description  String?
+  /// URL pública completa del archivo en Cloudflare R2, o null si el
+  /// producto no tiene imagen.
   imageUrl     String?
   categoryId   String?
   category     Category?       @relation(fields: [categoryId], references: [id])
   price        Decimal         @db.Decimal(12, 2)
+  /// Costo de compra (para calcular margen); no se muestra al cliente final
+  /// en la factura.
   cost         Decimal         @default(0) @db.Decimal(12, 2)
   stock        Int             @default(0)
+  /// Umbral para la alerta de "stock bajo" del dashboard (cuando
+  /// stock <= minStock).
   minStock     Int             @default(0)
+  /// Soft delete: "eliminar" un producto solo pone esto en false, nunca se
+  /// borra la fila (ver deleteProduct() en products.service.ts) porque
+  /// facturas pasadas siguen referenciándolo.
   active       Boolean         @default(true)
   createdAt    DateTime        @default(now())
   updatedAt    DateTime        @updatedAt
@@ -78,13 +116,20 @@ model Product {
   @@index([categoryId])
 }
 
+/// Registro auditable de un cambio de stock (ver stock-movements.service.ts).
+/// Es el historial de "por qué" cambió el stock de un producto.
 model StockMovement {
   id        String       @id @default(uuid())
   productId String
   product   Product      @relation(fields: [productId], references: [id])
   type      MovementType
   quantity  Int
+  /// Texto libre explicando el motivo (ej. "Venta - Factura #12",
+  /// "Anulación factura #12", o algo que escribe el usuario en un ajuste
+  /// manual). Opcional.
   reason    String?
+  /// Quién ejecutó el movimiento (no necesariamente el dueño de la
+  /// factura relacionada, ver invoices.service.ts sobre anulaciones).
   userId    String
   user      User         @relation(fields: [userId], references: [id])
   createdAt DateTime     @default(now())
@@ -92,22 +137,33 @@ model StockMovement {
   @@index([productId, createdAt])
 }
 
+/// A quién se le factura. No confundir con User (los trabajadores del
+/// sistema).
 model Client {
-  id         String    @id @default(uuid())
-  name       String
-  nit        String?   @unique
-  email      String?
-  phone      String?
-  address    String?
-  createdAt  DateTime  @default(now())
-  invoices   Invoice[]
+  id        String    @id @default(uuid())
+  name      String
+  /// Número de Identificación Tributaria (Guatemala). Opcional porque
+  /// existen ventas a "Consumidor Final" sin NIT; único cuando sí se da.
+  nit       String?   @unique
+  email     String?
+  phone     String?
+  address   String?
+  createdAt DateTime  @default(now())
+  invoices  Invoice[]
 }
 
+/// Una factura emitida (o luego anulada). Es el documento central del
+/// sistema: nunca se borra, y sus montos (subtotal/tax/total) quedan
+/// congelados en el momento de emitirla, sin importar si el producto
+/// cambia de precio después.
 model Invoice {
   id        String        @id @default(uuid())
+  /// Correlativo autoincremental, distinto del `id` (uuid). Es el número
+  /// "humano" que se le muestra al cliente (factura #12).
   number    Int           @unique @default(autoincrement())
   clientId  String
   client    Client        @relation(fields: [clientId], references: [id])
+  /// Quién emitió la factura (el vendedor que hizo la venta).
   userId    String
   user      User          @relation(fields: [userId], references: [id])
   status    InvoiceStatus @default(EMITIDA)
@@ -117,8 +173,11 @@ model Invoice {
   createdAt DateTime      @default(now())
   items     InvoiceItem[]
 
+  /// Estos tres campos solo tienen valor si status = ANULADA.
   cancelledAt       DateTime?
   cancelledByUserId String?
+  /// Quien anuló la factura — puede ser distinto de `user` (quien la
+  /// emitió originalmente).
   cancelledBy       User?     @relation("InvoiceCancelledBy", fields: [cancelledByUserId], references: [id])
 
   @@index([createdAt])
@@ -127,6 +186,7 @@ model Invoice {
   @@index([cancelledByUserId])
 }
 
+/// Una línea de una factura (un producto + cantidad dentro de esa venta).
 model InvoiceItem {
   id        String  @id @default(uuid())
   invoiceId String
@@ -134,7 +194,12 @@ model InvoiceItem {
   productId String
   product   Product @relation(fields: [productId], references: [id])
   quantity  Int
+  /// Precio del producto AL MOMENTO de facturar (copiado desde
+  /// Product.price al crear la factura) — se guarda aquí para que el precio
+  /// de una factura vieja no cambie si el producto se reprecia después.
   unitPrice Decimal @db.Decimal(12, 2)
+  /// quantity * unitPrice, precalculado y guardado (no derivado en cada
+  /// lectura) para que el PDF/reporte no tenga que recalcular nada.
   subtotal  Decimal @db.Decimal(12, 2)
 
   @@index([invoiceId])

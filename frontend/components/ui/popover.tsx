@@ -1,5 +1,7 @@
 "use client"
 
+// Panel flotante anclado a un trigger. Base de los combobox (Product/Client)
+// y de cualquier menú contextual simple.
 import * as React from "react"
 import { Popover as PopoverPrimitive } from "@base-ui/react/popover"
 import { cn } from "cn"

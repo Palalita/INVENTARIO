@@ -25,6 +25,8 @@ import { useCancelInvoice, useInvoice, downloadInvoicePdf } from "@/lib/hooks/us
 import { formatCurrency } from "@/lib/invoice-calculations";
 import { useAuthStore } from "@/lib/stores/auth-store";
 
+// Ruta /facturas/[id]: detalle de solo lectura de una factura, con acciones
+// de descargar PDF y (solo ADMIN, solo si sigue EMITIDA) anular.
 export default function FacturaDetallePage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
@@ -35,6 +37,7 @@ export default function FacturaDetallePage() {
   const { data: invoice, isLoading, isError, refetch } = useInvoice(params.id);
   const cancelInvoice = useCancelInvoice();
 
+  // Descarga el PDF de la factura (ver downloadInvoicePdf en use-invoices.ts).
   async function handleDownload() {
     if (!invoice) return;
     setIsDownloading(true);
@@ -47,6 +50,8 @@ export default function FacturaDetallePage() {
     }
   }
 
+  // Anula la factura confirmada en el ConfirmDialog de abajo (el backend
+  // repone el stock de los productos vendidos).
   async function handleCancel() {
     if (!invoice) return;
     try {

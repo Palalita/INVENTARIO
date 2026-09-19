@@ -25,6 +25,10 @@ interface UserTableProps {
   currentUserId?: string;
 }
 
+// Tabla de usuarios del sistema (pantalla solo-ADMIN). Marca "(tú)" junto al
+// propio usuario logueado (`currentUserId`) y atenúa las filas inactivas.
+// No hay borrar: desactivar (`active: false`) es la forma de dar de baja a
+// un usuario sin perder el historial de facturas que generó.
 export function UserTable({ users, isLoading, isError, onRetry, currentUserId }: UserTableProps) {
   if (isError) {
     return <ErrorState message="No se pudieron cargar los usuarios" onRetry={onRetry} />;

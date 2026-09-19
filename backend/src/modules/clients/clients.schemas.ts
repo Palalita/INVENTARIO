@@ -6,6 +6,8 @@ export const listClientsQuerySchema = z.object({
   pageSize: z.coerce.number().int().positive().max(100).default(20)
 });
 
+// Todos los campos salvo `name` son opcionales: hay clientes que facturan
+// sin dar NIT/email/teléfono (ej. "Consumidor Final").
 export const createClientSchema = z.object({
   name: z.string().min(1, "El nombre es requerido"),
   nit: z.string().optional(),
@@ -14,6 +16,10 @@ export const createClientSchema = z.object({
   address: z.string().optional()
 });
 
+// A diferencia de createClientSchema, aquí los campos aceptan `null`
+// explícito además de `undefined`: `undefined` significa "no tocar este
+// campo" (actualización parcial), `null` significa "borrar el valor que
+// tenía" (ej. quitarle el NIT a un cliente).
 export const updateClientSchema = z.object({
   name: z.string().min(1).optional(),
   nit: z.string().optional().nullable(),

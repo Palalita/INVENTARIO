@@ -1,5 +1,7 @@
 "use client"
 
+// Avatar circular (foto o iniciales de respaldo). Usado en app-shell.tsx
+// para mostrar al usuario logueado.
 import * as React from "react"
 import { Avatar as AvatarPrimitive } from "@base-ui/react/avatar"
 import { cn } from "cn"

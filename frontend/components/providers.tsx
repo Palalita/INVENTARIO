@@ -5,6 +5,10 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ThemeProvider } from "next-themes";
 import { Toaster } from "sonner";
 
+// Envuelve toda la app (ver app/layout.tsx) con los providers globales:
+// TanStack Query (caché/estado de servidor), tema claro/oscuro, y las
+// notificaciones "toast". El QueryClient se crea una sola vez con useState
+// (no en cada render) para no perder la caché entre renders.
 export function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(
     () =>

@@ -11,6 +11,9 @@ interface KpiCardProps {
   tone?: "default" | "warning";
 }
 
+// Tarjeta de indicador del dashboard (ej. "Ventas hoy", "Facturas del mes").
+// Muestra un skeleton mientras carga y puede resaltarse en ámbar (`tone`)
+// para alertas como "Productos con stock bajo" cuando hay alguno.
 export function KpiCard({ label, value, icon: Icon, isLoading, tone = "default" }: KpiCardProps) {
   return (
     <Card>

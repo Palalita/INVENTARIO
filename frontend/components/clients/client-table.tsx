@@ -29,10 +29,14 @@ interface ClientTableProps {
   isAdmin: boolean;
 }
 
+// Tabla de clientes con edición inline (modal) y borrado con confirmación.
+// El botón de eliminar solo aparece para ADMIN (`isAdmin`); el fetch/paginado
+// vive en la página que la usa (app/(dashboard)/clientes/page.tsx).
 export function ClientTable({ clients, isLoading, isError, onRetry, isAdmin }: ClientTableProps) {
   const deleteClient = useDeleteClient();
   const [clientToDelete, setClientToDelete] = useState<Client | null>(null);
 
+  // Borra el cliente elegido en el ConfirmDialog de abajo.
   async function handleDelete(client: Client) {
     try {
       await deleteClient.mutateAsync(client.id);

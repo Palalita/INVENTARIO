@@ -35,6 +35,9 @@ interface UserFormDialogProps {
   trigger?: React.ReactElement;
 }
 
+// Modal de crear/editar usuario (solo ADMIN). Al crear pide contraseña
+// inicial; al editar el email queda fijo (es la clave de login) y en vez de
+// contraseña se puede cambiar el rol o activar/desactivar la cuenta.
 export function UserFormDialog({ user, trigger }: UserFormDialogProps) {
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(true);
@@ -54,6 +57,9 @@ export function UserFormDialog({ user, trigger }: UserFormDialogProps) {
     defaultValues: { name: "", email: "", password: "", role: "VENDEDOR" },
   });
 
+  // Al abrir el modal, carga los datos del usuario a editar (o valores por
+  // defecto si es uno nuevo). La contraseña nunca se precarga (el backend no
+  // la devuelve, y al editar no se toca a menos que exista un flujo aparte).
   useEffect(() => {
     if (open) {
       reset({
@@ -68,6 +74,8 @@ export function UserFormDialog({ user, trigger }: UserFormDialogProps) {
 
   const isSubmitting = createUser.isPending || updateUser.isPending;
 
+  // Crea o actualiza el usuario según `isEdit`. Al crear, exige contraseña
+  // (el schema la deja opcional porque en edición no aplica).
   async function onSubmit(values: UserFormValues) {
     if (!isEdit && !values.password) {
       toast.error("La contraseña es obligatoria");

@@ -21,6 +21,9 @@ interface ConfirmDialogProps {
   destructive?: boolean;
 }
 
+// Diálogo de confirmación genérico y reutilizable (ej. "¿Eliminar producto?",
+// "¿Anular factura?"). El componente que lo usa controla `open` y decide qué
+// hacer en `onConfirm`; este componente solo maneja la UI de confirmar/cancelar.
 export function ConfirmDialog({
   open,
   onOpenChange,

@@ -1,5 +1,8 @@
 import { z } from "zod";
 
+// Validación del form de crear/editar producto (react-hook-form + zodResolver
+// en product-form-dialog.tsx). `z.coerce.number` porque los <input type="number">
+// entregan strings; Zod los convierte y valida en un solo paso.
 export const productSchema = z.object({
   sku: z.string().min(1, "El SKU es obligatorio").max(50),
   name: z.string().min(1, "El nombre es obligatorio").max(150),
@@ -15,6 +18,8 @@ export const productSchema = z.object({
 
 export type ProductFormValues = z.infer<typeof productSchema>;
 
+// Validación del form de registrar un movimiento de stock manual
+// (stock-movement-dialog.tsx).
 export const stockMovementSchema = z.object({
   type: z.enum(["ENTRADA", "SALIDA", "AJUSTE"]),
   quantity: z.coerce.number({ message: "Cantidad inválida" }).int("Debe ser un número entero").positive("Debe ser mayor a 0"),

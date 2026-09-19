@@ -17,12 +17,18 @@ interface ProductImageFieldProps {
   product: Product;
 }
 
+// Selector de imagen para un producto que YA existe (a diferencia de
+// ProductImagePicker, que es para el flujo de "crear producto" donde todavía
+// no hay id). Sube/borra la imagen contra la API en cuanto el usuario actúa,
+// sin esperar a que se guarde el resto del formulario.
 export function ProductImageField({ product }: ProductImageFieldProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [confirmRemoveOpen, setConfirmRemoveOpen] = useState(false);
   const uploadImage = useUploadProductImage();
   const deleteImage = useDeleteProductImage();
 
+  // Valida tipo/tamaño en el cliente (el backend vuelve a validar la firma
+  // real del archivo, esto es solo para dar feedback rápido) y sube la imagen.
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     e.target.value = "";
@@ -46,6 +52,7 @@ export function ProductImageField({ product }: ProductImageFieldProps) {
     );
   }
 
+  // Confirma y ejecuta la eliminación de la imagen actual (ver ConfirmDialog abajo).
   async function handleRemove() {
     try {
       await deleteImage.mutateAsync(product.id);

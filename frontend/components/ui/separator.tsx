@@ -1,5 +1,6 @@
 "use client"
 
+// Línea divisoria simple (horizontal o vertical).
 import { Separator as SeparatorPrimitive } from "@base-ui/react/separator"
 import { cn } from "cn"
 

@@ -1,5 +1,7 @@
 "use client"
 
+// Panel deslizante (un Dialog que entra desde un borde de la pantalla). Es
+// el menú de navegación móvil en app-shell.tsx (`side="left"`).
 import * as React from "react"
 import { Dialog as SheetPrimitive } from "@base-ui/react/dialog"
 import { cn } from "cn"

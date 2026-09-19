@@ -1,5 +1,8 @@
 "use client"
 
+// Piezas de tabla HTML estilizadas (Table/Header/Body/Row/Cell). Todas las
+// tablas de la app (productos, clientes, facturas, usuarios...) se arman
+// componiendo estas piezas en vez de usar <table> a mano.
 import * as React from "react"
 import { cn } from "cn"
 

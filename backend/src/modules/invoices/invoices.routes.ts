@@ -11,6 +11,10 @@ import * as invoicesController from "./invoices.controller";
 
 const router = Router();
 
+// Ver, crear y descargar el PDF: cualquier usuario autenticado (un
+// VENDEDOR necesita poder facturar y ver sus propias facturas). Anular una
+// factura, en cambio, es exclusivo de ADMIN — es la operación irreversible
+// del módulo (revierte stock, no se puede deshacer).
 router.use(requireAuth);
 
 router.get("/", validate({ query: listInvoicesQuerySchema }), invoicesController.listInvoices);
