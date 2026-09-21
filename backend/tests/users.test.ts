@@ -7,12 +7,14 @@ import { createAdmin, createUser, loginAs } from "./helpers/factories";
 
 describe("Users (admin)", () => {
   let adminToken: string;
+  let adminId: string;
   let vendedorToken: string;
 
   beforeEach(async () => {
     await resetDb();
     const admin = await createAdmin({ email: "admin@test.local" });
     const vendedor = await createUser({ email: "vendedor@test.local", role: Role.VENDEDOR });
+    adminId = admin.id;
     adminToken = (await loginAs(admin.email)).body.accessToken;
     vendedorToken = (await loginAs(vendedor.email)).body.accessToken;
   });
@@ -105,5 +107,38 @@ describe("Users (admin)", () => {
 
     expect(patchRes.status).toBe(200);
     expect(patchRes.body.user.role).toBe("ADMIN");
+  });
+
+  it("no permite desactivar al único admin activo", async () => {
+    const res = await request(app)
+      .patch(`/api/v1/users/${adminId}`)
+      .set("Authorization", `Bearer ${adminToken}`)
+      .send({ active: false });
+
+    expect(res.status).toBe(409);
+    expect(res.body.error.code).toBe("LAST_ADMIN");
+  });
+
+  it("no permite quitarle el rol de administrador al único admin activo", async () => {
+    const res = await request(app)
+      .patch(`/api/v1/users/${adminId}`)
+      .set("Authorization", `Bearer ${adminToken}`)
+      .send({ role: "VENDEDOR" });
+
+    expect(res.status).toBe(409);
+    expect(res.body.error.code).toBe("LAST_ADMIN");
+  });
+
+  it("sí permite desactivar a un admin si hay otro admin activo", async () => {
+    const secondAdmin = await createAdmin({ email: "segundo-admin@test.local" });
+
+    const res = await request(app)
+      .patch(`/api/v1/users/${adminId}`)
+      .set("Authorization", `Bearer ${adminToken}`)
+      .send({ active: false });
+
+    expect(res.status).toBe(200);
+    expect(res.body.user.active).toBe(false);
+    expect(secondAdmin.role).toBe("ADMIN");
   });
 });

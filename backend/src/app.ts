@@ -24,6 +24,15 @@ import dashboardRoutes from "./modules/dashboard/dashboard.routes";
 export function createApp(): Express {
   const app = express();
 
+  // Railway pone la app detrás de un proxy: sin esto, Express no confía en
+  // X-Forwarded-For y `req.ip` resuelve siempre a la IP del proxy (la misma
+  // para todos los usuarios), no la del cliente real. Eso rompe el rate
+  // limiter de /auth/login (comparte el mismo cupo entre todo el mundo) y
+  // puede tanto bloquear a todo el negocio con un solo intento fallido como
+  // dejar de frenar fuerza bruta dirigida a una cuenta. `1` = confiar en un
+  // solo hop de proxy (el de Railway).
+  app.set("trust proxy", 1);
+
   // Oculta el header "X-Powered-By: Express" que delataría la tecnología
   // usada, para no facilitarle reconocimiento a un atacante.
   app.disable("x-powered-by");

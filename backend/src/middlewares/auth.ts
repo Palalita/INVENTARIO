@@ -41,7 +41,11 @@ export function requireAuth(req: Request, _res: Response, next: NextFunction) {
   const token = header.slice("Bearer ".length);
 
   try {
-    const payload = jwt.verify(token, env.JWT_ACCESS_SECRET) as AccessTokenPayload;
+    // `algorithms` fijo evita ataques de confusión de algoritmo (ej. un
+    // token firmado con un algoritmo distinto al esperado). No hay riesgo
+    // práctico hoy porque el sistema nunca usa claves asimétricas, pero es
+    // barato de fijar y evita sorpresas si eso cambia en el futuro.
+    const payload = jwt.verify(token, env.JWT_ACCESS_SECRET, { algorithms: ["HS256"] }) as AccessTokenPayload;
     req.user = payload;
     next();
   } catch {

@@ -29,6 +29,17 @@ function hashRefreshToken(rawToken: string): string {
   return crypto.createHmac("sha256", env.REFRESH_TOKEN_SECRET).update(rawToken).digest("hex");
 }
 
+// Sin esto, la tabla RefreshToken crece para siempre: cada login/refresh
+// inserta una fila nueva y las viejas solo se marcan `revoked`, nunca se
+// borran. Una vez vencido (expiresAt en el pasado) el token ya es rechazado
+// por el chequeo de refresh() sin importar `revoked`, así que borrarlo no
+// debilita la detección de reuso de tokens todavía vigentes — se aprovecha
+// cada login/refresh del propio usuario para podar sus filas vencidas en vez
+// de necesitar un job periódico aparte.
+async function pruneExpiredRefreshTokens(userId: string): Promise<void> {
+  await prisma.refreshToken.deleteMany({ where: { userId, expiresAt: { lt: new Date() } } });
+}
+
 // Firma un JWT de acceso con los datos mínimos necesarios para autorizar
 // requests (id, email, rol), sin tocar la base de datos — por eso
 // requireAuth (middlewares/auth.ts) puede verificar un access token sin
@@ -80,6 +91,8 @@ export async function login(input: LoginInput) {
 
   const { passwordHash: _passwordHash, ...safeUser } = user;
 
+  await pruneExpiredRefreshTokens(user.id);
+
   return { user: safeUser, accessToken, rawRefreshToken };
 }
 
@@ -118,6 +131,8 @@ export async function refresh(rawToken: string | undefined) {
   ]);
 
   const accessToken = signAccessToken(existing.user);
+
+  await pruneExpiredRefreshTokens(existing.userId);
 
   return { accessToken, rawRefreshToken: newRawToken };
 }

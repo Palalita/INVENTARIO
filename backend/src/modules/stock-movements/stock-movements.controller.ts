@@ -14,6 +14,6 @@ export const listMovements = asyncHandler(async (req: Request, res: Response) =>
 // antes) — queda registrado en el movimiento quién lo hizo, para la
 // auditoría.
 export const createMovement = asyncHandler(async (req: Request, res: Response) => {
-  const movement = await movementsService.createMovement(req.params.id, req.user!.sub, req.body);
+  const movement = await movementsService.createMovement(req.params.id, req.user!.sub, req.user!.role, req.body);
   res.status(201).json(serialize({ movement }));
 });

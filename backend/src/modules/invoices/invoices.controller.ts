@@ -16,7 +16,7 @@ export const listInvoices = asyncHandler(async (req: Request, res: Response) => 
 });
 
 export const getInvoice = asyncHandler(async (req: Request, res: Response) => {
-  const invoice = await invoicesService.getInvoiceById(req.params.id);
+  const invoice = await invoicesService.getInvoiceById(req.params.id, { id: req.user!.sub, role: req.user!.role });
   res.status(200).json(serialize({ invoice }));
 });
 
@@ -36,6 +36,6 @@ export const cancelInvoice = asyncHandler(async (req: Request, res: Response) =>
 // No usa `serialize`/`res.json`: streamInvoicePdf escribe directo la
 // respuesta binaria (el PDF) sobre `res`.
 export const getInvoicePdf = asyncHandler(async (req: Request, res: Response) => {
-  const invoice = await invoicesService.getInvoiceById(req.params.id);
+  const invoice = await invoicesService.getInvoiceById(req.params.id, { id: req.user!.sub, role: req.user!.role });
   streamInvoicePdf(invoice, res);
 });

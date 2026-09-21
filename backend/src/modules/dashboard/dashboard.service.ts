@@ -18,16 +18,25 @@ interface RequestingUser {
 // la zona horaria del contenedor.
 const BUSINESS_UTC_OFFSET_MS = -6 * 60 * 60 * 1000;
 
+// Convierte una fecha cuyos CAMPOS UTC representan una hora de pared en
+// Guatemala (ej. Date.UTC(2026,0,1) = "1 de enero, medianoche, hora de
+// Guatemala") al instante UTC real que le corresponde. Único lugar donde se
+// resta el offset — startOfToday/startOfMonth/startOfLocalDay solo arman
+// esa fecha "de mentira" con los campos que quieren y se lo pasan a esta
+// función, en vez de repetir la resta tres veces.
+function fromBusinessLocalFields(utcFieldsAsBusinessLocal: Date): Date {
+  return new Date(utcFieldsAsBusinessLocal.getTime() - BUSINESS_UTC_OFFSET_MS);
+}
+
 function startOfToday(): Date {
   const shifted = new Date(Date.now() + BUSINESS_UTC_OFFSET_MS);
   shifted.setUTCHours(0, 0, 0, 0);
-  return new Date(shifted.getTime() - BUSINESS_UTC_OFFSET_MS);
+  return fromBusinessLocalFields(shifted);
 }
 
 function startOfMonth(): Date {
   const shifted = new Date(Date.now() + BUSINESS_UTC_OFFSET_MS);
-  const firstOfMonth = new Date(Date.UTC(shifted.getUTCFullYear(), shifted.getUTCMonth(), 1));
-  return new Date(firstOfMonth.getTime() - BUSINESS_UTC_OFFSET_MS);
+  return fromBusinessLocalFields(new Date(Date.UTC(shifted.getUTCFullYear(), shifted.getUTCMonth(), 1)));
 }
 
 // Misma regla de scoping que invoices.service.ts: un VENDEDOR solo ve sus
@@ -41,8 +50,7 @@ function userScopeWhere(requester: RequestingUser): Prisma.InvoiceWhereInput {
 // en Guatemala) a su medianoche real en UTC, igual que startOfToday().
 function startOfLocalDay(dateStr: string, addDays = 0): Date {
   const [year, month, day] = dateStr.split("-").map(Number);
-  const midnightAsUtc = new Date(Date.UTC(year, month - 1, day + addDays));
-  return new Date(midnightAsUtc.getTime() - BUSINESS_UTC_OFFSET_MS);
+  return fromBusinessLocalFields(new Date(Date.UTC(year, month - 1, day + addDays)));
 }
 
 // Arma todos los KPIs de la pantalla principal del dashboard en un solo
@@ -119,22 +127,32 @@ export async function getSummary(requester: RequestingUser) {
   };
 }
 
+// Ventana por defecto cuando no se manda "from": sin esto, pedir el reporte
+// sin fechas (el único endpoint de listado del backend sin paginar) trae
+// TODAS las facturas no anuladas de toda la historia con sus items
+// incluidos, en una sola respuesta. Quien de verdad quiera un rango más
+// amplio lo pide explícito con "from" — esto solo acota el caso "no mandé
+// nada".
+const DEFAULT_REPORT_WINDOW_DAYS = 90;
+const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+
 // Detalle de ventas en un rango de fechas, usado tanto para la gráfica
 // "últimos 14 días" del dashboard como para el reporte exportable a CSV.
 export async function getSalesReport(query: SalesReportQuery, requester: RequestingUser) {
   const where: Prisma.InvoiceWhereInput = { ...userScopeWhere(requester), status: InvoiceStatus.EMITIDA };
 
-  if (query.from || query.to) {
-    where.createdAt = {};
-    // "from"/"to" llegan como fechas de calendario ("YYYY-MM-DD") sin hora.
-    // new Date("YYYY-MM-DD") las interpreta como medianoche UTC, no medianoche
-    // local, lo que corta ventas del día (sobre todo las de la tarde/noche)
-    // en cualquier zona horaria detrás de UTC. Se parsean como fecha local,
-    // igual que startOfToday()/startOfMonth() más arriba, y "to" se vuelve un
-    // límite exclusivo al día siguiente para incluir el día completo.
-    if (query.from) where.createdAt.gte = startOfLocalDay(query.from);
-    if (query.to) where.createdAt.lt = startOfLocalDay(query.to, 1);
-  }
+  // "from"/"to" llegan como fechas de calendario ("YYYY-MM-DD") sin hora.
+  // new Date("YYYY-MM-DD") las interpreta como medianoche UTC, no medianoche
+  // local, lo que corta ventas del día (sobre todo las de la tarde/noche) en
+  // cualquier zona horaria detrás de UTC. Se parsean como fecha local, igual
+  // que startOfToday()/startOfMonth() más arriba, y el límite superior es
+  // exclusivo al día siguiente para incluir el día completo.
+  const upperBound = query.to ? startOfLocalDay(query.to, 1) : new Date(startOfToday().getTime() + ONE_DAY_MS);
+  const lowerBound = query.from
+    ? startOfLocalDay(query.from)
+    : new Date(upperBound.getTime() - DEFAULT_REPORT_WINDOW_DAYS * ONE_DAY_MS);
+
+  where.createdAt = { gte: lowerBound, lt: upperBound };
 
   const invoices = await prisma.invoice.findMany({
     where,

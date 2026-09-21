@@ -134,6 +134,69 @@ describe("Invoices", () => {
     expect(cancelRes.status).toBe(403);
   });
 
+  it("un vendedor no puede ver ni descargar el PDF de la factura de otro vendedor", async () => {
+    const otherVendedor = await createUser({ email: "otro-vendedor@test.local", role: Role.VENDEDOR });
+    const otherVendedorToken = (await loginAs(otherVendedor.email)).body.accessToken;
+
+    const product = await createProduct({ price: 10, stock: 20, minStock: 2 });
+    const client = await createClient();
+
+    const createRes = await request(app)
+      .post("/api/v1/invoices")
+      .set("Authorization", `Bearer ${vendedorToken}`)
+      .send({ clientId: client.id, items: [{ productId: product.id, quantity: 1 }] });
+    const invoiceId = createRes.body.invoice.id;
+
+    const getRes = await request(app)
+      .get(`/api/v1/invoices/${invoiceId}`)
+      .set("Authorization", `Bearer ${otherVendedorToken}`);
+    expect(getRes.status).toBe(404);
+
+    const pdfRes = await request(app)
+      .get(`/api/v1/invoices/${invoiceId}/pdf`)
+      .set("Authorization", `Bearer ${otherVendedorToken}`);
+    expect(pdfRes.status).toBe(404);
+
+    // El dueño de la factura y un admin sí pueden verla.
+    const ownerRes = await request(app)
+      .get(`/api/v1/invoices/${invoiceId}`)
+      .set("Authorization", `Bearer ${vendedorToken}`);
+    expect(ownerRes.status).toBe(200);
+
+    const adminRes = await request(app)
+      .get(`/api/v1/invoices/${invoiceId}`)
+      .set("Authorization", `Bearer ${adminToken}`);
+    expect(adminRes.status).toBe(200);
+  });
+
+  it("genera el PDF de una factura con muchas líneas sin cortarse (paginación)", async () => {
+    const client = await createClient();
+    const products = await Promise.all(
+      Array.from({ length: 40 }, (_, i) => createProduct({ sku: `PAG-${i}`, price: 10, stock: 5, minStock: 1 }))
+    );
+
+    const createRes = await request(app)
+      .post("/api/v1/invoices")
+      .set("Authorization", `Bearer ${vendedorToken}`)
+      .send({
+        clientId: client.id,
+        items: products.map((p) => ({ productId: p.id, quantity: 1 }))
+      });
+    expect(createRes.status).toBe(201);
+
+    const pdfRes = await request(app)
+      .get(`/api/v1/invoices/${createRes.body.invoice.id}/pdf`)
+      .set("Authorization", `Bearer ${adminToken}`);
+
+    expect(pdfRes.status).toBe(200);
+    const body: Buffer = Buffer.isBuffer(pdfRes.body) ? pdfRes.body : Buffer.from(pdfRes.text ?? "", "binary");
+    // Un PDF con salto de página real tiene más de un objeto /Page — no
+    // prueba el layout exacto, pero sí que pdfkit efectivamente agregó
+    // páginas en vez de dibujar 40 filas fuera de una sola.
+    const pageMatches = body.toString("latin1").match(/\/Type\s*\/Page[^s]/g) ?? [];
+    expect(pageMatches.length).toBeGreaterThan(1);
+  });
+
   it("genera el PDF de una factura", async () => {
     const product = await createProduct({ price: 10, stock: 20, minStock: 2 });
     const client = await createClient();

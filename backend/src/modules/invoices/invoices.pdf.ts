@@ -7,6 +7,35 @@ import PDFDocument from "pdfkit";
 import { Response } from "express";
 import { Prisma } from "@prisma/client";
 
+// Mismo formato que formatCurrency() del frontend (lib/invoice-calculations.ts):
+// símbolo de moneda de Guatemala y separador de miles, en vez de un número
+// crudo con .toFixed(2).
+const currencyFormatter = new Intl.NumberFormat("es-GT", {
+  style: "currency",
+  currency: "GTQ",
+  minimumFractionDigits: 2
+});
+
+function formatMoney(value: Prisma.Decimal): string {
+  return currencyFormatter.format(value.toNumber());
+}
+
+// Alto aproximado de una fila (fuente 10pt + el salto de doc.moveDown()).
+// Antes de dibujar una fila que no cabría en lo que queda de página, se
+// agrega una página nueva y se repite el encabezado — pdfkit no pagina solo
+// cuando el texto se posiciona con coordenadas x/y explícitas (como esta
+// "tabla" hecha a mano), así que sin este chequeo una factura con ~25-30+
+// líneas terminaba con filas dibujadas fuera del área visible de la página.
+const ROW_HEIGHT = 20;
+
+function ensureSpace(doc: PDFKit.PDFDocument, minHeight: number, onNewPage?: () => void) {
+  const bottom = doc.page.height - doc.page.margins.bottom;
+  if (doc.y + minHeight > bottom) {
+    doc.addPage();
+    onNewPage?.();
+  }
+}
+
 // Forma mínima de los datos que necesita el PDF (subconjunto de lo que
 // devuelve invoices.service.ts con su `invoiceInclude`).
 interface InvoiceForPdf {
@@ -61,29 +90,36 @@ export function streamInvoicePdf(invoice: InvoiceForPdf, res: Response): void {
 
   // pdfkit no tiene un sistema de tablas de alto nivel: cada columna se
   // dibuja con una coordenada X fija (50, 220, 300, 360, 440), a mano.
-  const tableTop = doc.y;
-  doc.fontSize(10);
-  doc.text("Producto", 50, tableTop);
-  doc.text("SKU", 220, tableTop);
-  doc.text("Cant.", 300, tableTop);
-  doc.text("P. Unit.", 360, tableTop);
-  doc.text("Subtotal", 440, tableTop);
-  doc.moveDown();
+  function drawItemsHeader() {
+    const y = doc.y;
+    doc.fontSize(10);
+    doc.text("Producto", 50, y);
+    doc.text("SKU", 220, y);
+    doc.text("Cant.", 300, y);
+    doc.text("P. Unit.", 360, y);
+    doc.text("Subtotal", 440, y);
+    doc.moveDown();
+  }
+
+  drawItemsHeader();
 
   invoice.items.forEach((item) => {
+    ensureSpace(doc, ROW_HEIGHT, drawItemsHeader);
     const y = doc.y;
     doc.text(item.product.name, 50, y);
     doc.text(item.product.sku, 220, y);
     doc.text(String(item.quantity), 300, y);
-    doc.text(item.unitPrice.toFixed(2), 360, y);
-    doc.text(item.subtotal.toFixed(2), 440, y);
+    doc.text(formatMoney(item.unitPrice), 360, y);
+    doc.text(formatMoney(item.subtotal), 440, y);
     doc.moveDown();
   });
 
+  // Los tres renglones de totales deben quedar juntos en la misma página.
+  ensureSpace(doc, ROW_HEIGHT * 4);
   doc.moveDown();
-  doc.fontSize(11).text(`Subtotal: ${invoice.subtotal.toFixed(2)}`, { align: "right" });
-  doc.text(`Impuesto: ${invoice.tax.toFixed(2)}`, { align: "right" });
-  doc.fontSize(13).text(`Total: ${invoice.total.toFixed(2)}`, { align: "right" });
+  doc.fontSize(11).text(`Subtotal: ${formatMoney(invoice.subtotal)}`, { align: "right" });
+  doc.text(`Impuesto: ${formatMoney(invoice.tax)}`, { align: "right" });
+  doc.fontSize(13).text(`Total: ${formatMoney(invoice.total)}`, { align: "right" });
 
   doc.end();
 }

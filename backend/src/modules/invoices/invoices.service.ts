@@ -58,9 +58,13 @@ export async function listInvoices(query: ListInvoicesQuery, requester: Requesti
   return buildPaginatedResponse(data, total, page, pageSize);
 }
 
-export async function getInvoiceById(id: string) {
+// Mismo scoping por rol que listInvoices: un VENDEDOR no puede ver ni
+// descargar el PDF de una factura ajena solo porque conoce su id. Se
+// devuelve 404 (no 403) para no confirmarle a un vendedor que una factura
+// con ese id existe si no es suya.
+export async function getInvoiceById(id: string, requester: RequestingUser) {
   const invoice = await prisma.invoice.findUnique({ where: { id }, include: invoiceInclude });
-  if (!invoice) {
+  if (!invoice || (requester.role === Role.VENDEDOR && invoice.userId !== requester.id)) {
     throw AppError.notFound("Factura no encontrada");
   }
   return invoice;
@@ -164,8 +168,26 @@ export async function createInvoice(userId: string, input: CreateInvoiceInput) {
     // deja un StockMovement de tipo SALIDA por cada producto — la
     // trazabilidad de "por qué bajó el stock" queda ligada al número de
     // factura en el campo `reason`.
+    //
+    // El decremento usa updateMany con el stock mínimo requerido en el
+    // `where`, no un update plano: la validación de arriba lee el stock una
+    // vez y puede quedar obsoleta si otra venta concurrente del mismo
+    // producto se cuela entre esa lectura y este punto (dos vendedores
+    // vendiendo las últimas unidades al mismo tiempo). `updateMany` con esa
+    // condición es atómico a nivel de fila en Postgres — si el `count`
+    // vuelve en 0, alguien más ganó la carrera y hay que fallar aquí en vez
+    // de dejar el stock en negativo.
     for (const [productId, requested] of quantitiesByProduct.entries()) {
-      await tx.product.update({ where: { id: productId }, data: { stock: { decrement: requested } } });
+      const result = await tx.product.updateMany({
+        where: { id: productId, stock: { gte: requested } },
+        data: { stock: { decrement: requested } }
+      });
+      if (result.count === 0) {
+        const current = await tx.product.findUnique({ where: { id: productId } });
+        throw AppError.conflict("Stock insuficiente para uno o más productos", "INSUFFICIENT_STOCK", [
+          { productId, available: current?.stock ?? 0, requested }
+        ]);
+      }
       await tx.stockMovement.create({
         data: {
           productId,

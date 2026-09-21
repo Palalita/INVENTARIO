@@ -87,7 +87,10 @@ export function InvoiceLineItems({
                     value={line.quantity}
                     aria-invalid={hasIssue}
                     onChange={(e) =>
-                      onQuantityChange(line.productId, Math.max(1, Number(e.target.value) || 1))
+                      onQuantityChange(
+                        line.productId,
+                        Math.min(line.availableStock, Math.max(1, Number(e.target.value) || 1))
+                      )
                     }
                     className={cn("h-8 w-20", hasIssue && "border-destructive")}
                   />
