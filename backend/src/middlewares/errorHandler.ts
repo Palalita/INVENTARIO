@@ -90,6 +90,25 @@ export function errorHandler(err: unknown, req: Request, res: Response, _next: N
     }
   }
 
+  // Red de seguridad para P2003: verificado en producción (Postgres de
+  // Railway) que Prisma no siempre logra clasificar una violación de FK
+  // como PrismaClientKnownRequestError — a veces llega como
+  // PrismaClientUnknownRequestError, con el mensaje crudo del motor
+  // ("violates ... foreign key constraint") en vez de un `code` estructurado.
+  // Sin este chequeo por texto, ese caso se cae al 500 genérico de abajo.
+  if (
+    err instanceof Prisma.PrismaClientUnknownRequestError &&
+    /foreign key constraint/i.test(err.message)
+  ) {
+    res.status(409).json({
+      error: {
+        code: "FOREIGN_KEY_CONSTRAINT",
+        message: "No se puede eliminar: tiene registros relacionados."
+      }
+    });
+    return;
+  }
+
   logger.error({ err, requestId }, "Error no controlado");
   res.status(500).json({
     error: { code: "INTERNAL_ERROR", message: "Ocurrió un error interno del servidor." }
