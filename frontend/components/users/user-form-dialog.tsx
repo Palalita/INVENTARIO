@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
@@ -57,11 +57,14 @@ export function UserFormDialog({ user, trigger }: UserFormDialogProps) {
     defaultValues: { name: "", email: "", password: "", role: "VENDEDOR" },
   });
 
-  // Al abrir el modal, carga los datos del usuario a editar (o valores por
-  // defecto si es uno nuevo). La contraseña nunca se precarga (el backend no
-  // la devuelve, y al editar no se toca a menos que exista un flujo aparte).
-  useEffect(() => {
-    if (open) {
+  // Se resetea en el evento de apertura (no en un efecto atado al prop
+  // `user`): si el form reaccionara a cada cambio de referencia de `user`,
+  // una revalidación en segundo plano de la lista de usuarios mientras el
+  // modal está abierto borraría lo que el usuario esté editando. La
+  // contraseña nunca se precarga (el backend no la devuelve, y al editar no
+  // se toca a menos que exista un flujo aparte).
+  function handleOpenChange(nextOpen: boolean) {
+    if (nextOpen) {
       reset({
         name: user?.name ?? "",
         email: user?.email ?? "",
@@ -70,7 +73,8 @@ export function UserFormDialog({ user, trigger }: UserFormDialogProps) {
       });
       setActive(user?.active ?? true);
     }
-  }, [open, user, reset]);
+    setOpen(nextOpen);
+  }
 
   const isSubmitting = createUser.isPending || updateUser.isPending;
 
@@ -105,7 +109,7 @@ export function UserFormDialog({ user, trigger }: UserFormDialogProps) {
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger
         render={
           trigger ?? (

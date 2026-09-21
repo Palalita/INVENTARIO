@@ -62,7 +62,12 @@ export function ClientFormDialog({
   });
 
   // Al abrir el modal, carga los datos del cliente a editar (o los valores
-  // por defecto/`initialName` si es uno nuevo).
+  // por defecto/`initialName` si es uno nuevo). Las dependencias se limitan
+  // a `open` a propósito: este dialog puede abrirse de forma controlada
+  // desde afuera (ver client-combobox.tsx), así que si el efecto también
+  // reaccionara a `client`/`initialName`, una revalidación en segundo plano
+  // de la lista de clientes mientras el modal sigue abierto dispararía un
+  // reset y borraría lo que el usuario esté escribiendo.
   useEffect(() => {
     if (open) {
       reset({
@@ -73,7 +78,8 @@ export function ClientFormDialog({
         address: client?.address ?? "",
       });
     }
-  }, [open, client, initialName, reset]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
 
   const isSubmitting = createClient.isPending || updateClient.isPending;
 
