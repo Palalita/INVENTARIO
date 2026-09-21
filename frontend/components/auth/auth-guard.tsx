@@ -6,6 +6,14 @@ import { Loader2 } from "lucide-react";
 import { bootstrapSession } from "@/lib/api";
 import { useAuthStore } from "@/lib/stores/auth-store";
 
+// Protege las páginas del panel. El middleware (ver middleware.ts) ya
+// redirigió a /login en el servidor si no había cookie de sesión, así que en
+// el caso normal este componente arranca sabiendo que sí hay una sesión por
+// confirmar. Aun así necesita esta capa client-side: la cookie solo prueba
+// que "hubo" una sesión, no que siga siendo válida (pudo revocarse, expirar
+// del lado del backend, etc.), y eso solo se sabe después de intentar
+// refrescarla. El router.replace("/login") de abajo es ese fallback — un
+// caso raro, no el camino principal como antes de tener el middleware.
 export function AuthGuard({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const user = useAuthStore((state) => state.user);

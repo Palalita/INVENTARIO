@@ -1,16 +1,7 @@
-"use client";
-
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
-
-// Ruta raíz ("/"): no muestra nada, solo redirige a /dashboard. Ver la
-// explicación de por qué esto es client-side (no server-side) en auth-guard.tsx.
+// Ruta raíz ("/"): en la práctica nunca se ve. El middleware (ver
+// middleware.ts) redirige "/" a /dashboard o /login en el servidor, antes de
+// que este componente llegue a renderizar. Existe solo como fallback por si
+// el middleware no llegara a interceptar la request.
 export default function Home() {
-  const router = useRouter();
-
-  useEffect(() => {
-    router.replace("/dashboard");
-  }, [router]);
-
   return null;
 }

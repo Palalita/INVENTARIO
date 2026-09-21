@@ -14,10 +14,13 @@ export const api = axios.create({
   withCredentials: true, // send/receive the httpOnly refresh-token cookie
 });
 
-// Separate instance (no interceptors) used exclusively for the refresh call so it
-// never recurses into the 401 handler below.
+// Cliente separado (sin interceptores, para no recursar en el handler de 401
+// de abajo) para login/refresh/logout. A diferencia de `api`, este NO llama a
+// Railway directo: pasa por las rutas /api/auth/* de este mismo frontend
+// (ver app/api/auth/_proxy.ts), que son las que necesitan la cookie httpOnly
+// de refresh y por eso deben quedar en el mismo dominio que el navegador.
 const refreshClient = axios.create({
-  baseURL: API_URL,
+  baseURL: "/api/auth",
   withCredentials: true,
 });
 
@@ -41,7 +44,7 @@ let refreshPromise: Promise<string | null> | null = null;
 async function refreshAccessToken(): Promise<string | null> {
   if (!refreshPromise) {
     refreshPromise = refreshClient
-      .post<{ accessToken: string }>("/auth/refresh")
+      .post<{ accessToken: string }>("/refresh")
       .then((res) => res.data.accessToken)
       .catch(() => null)
       .finally(() => {
@@ -122,7 +125,7 @@ export function getApiErrorDetails(error: unknown): ApiErrorBody["error"]["detai
 // Llama a POST /auth/login. El backend responde con el usuario + access
 // token, y de paso pone la cookie httpOnly de refresh.
 export async function login(email: string, password: string) {
-  const { data } = await refreshClient.post<LoginResponse>("/auth/login", {
+  const { data } = await refreshClient.post<LoginResponse>("/login", {
     email,
     password,
   });
@@ -133,7 +136,7 @@ export async function login(email: string, password: string) {
 // Si la llamada falla igual se ignora: el logout local (clearSession) es lo
 // que realmente importa para la UI.
 export async function logout() {
-  await refreshClient.post("/auth/logout").catch(() => undefined);
+  await refreshClient.post("/logout").catch(() => undefined);
 }
 
 // Trae los datos del usuario autenticado actual usando el access token.

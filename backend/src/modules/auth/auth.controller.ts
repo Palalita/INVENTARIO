@@ -11,11 +11,13 @@ import * as authService from "./auth.service";
 const REFRESH_COOKIE_NAME = "refreshToken";
 const REFRESH_COOKIE_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 
-// "none" es necesario porque frontend (Vercel) y backend (Railway) viven en
-// dominios distintos; con "strict"/"lax" el navegador nunca envía la cookie
-// entre sitios y el refresh siempre falla. Requiere secure: true (solo se usa
-// en producción, donde ya corre bajo HTTPS).
-const REFRESH_COOKIE_SAME_SITE = isProduction ? "none" : "strict";
+// El frontend (Next.js) ya no llama a login/refresh/logout directo: los
+// proxea a través de sus propias rutas API (ver frontend/app/api/auth/), que
+// reenvían la request a este backend y relayean el Set-Cookie de vuelta como
+// si viniera de su propio dominio. Para el navegador, esta cookie es same-
+// site (nunca cruza de Railway a Vercel), así que "strict" es correcto y más
+// seguro que "none".
+const REFRESH_COOKIE_SAME_SITE = "strict";
 
 // Manda el refresh token al navegador como cookie httpOnly (JS del cliente
 // no puede leerla, solo se envía automáticamente en cada request al
