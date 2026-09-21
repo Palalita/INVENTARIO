@@ -1,6 +1,6 @@
 "use client";
 
-import { AuthGuard } from "@/components/auth-guard";
+import { AuthGuard } from "@/components/auth/auth-guard";
 import { AppShell } from "@/components/layout/app-shell";
 
 // Layout de TODAS las rutas autenticadas (dashboard, productos, clientes,

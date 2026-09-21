@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { RequireAdmin } from "@/components/require-admin";
+import { RequireAdmin } from "@/components/auth/require-admin";
 import { PaginationBar } from "@/components/common/pagination-bar";
 import { UserTable } from "@/components/users/user-table";
 import { UserFormDialog } from "@/components/users/user-form-dialog";
