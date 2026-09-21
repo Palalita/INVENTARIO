@@ -7,8 +7,6 @@ import {
   Table,
   TableBody,
   TableCell,
-  TableHead,
-  TableHeader,
   TableRow,
 } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -17,6 +15,7 @@ import { ConfirmDialog } from "@/components/confirm-dialog";
 import { EmptyState } from "@/components/common/empty-state";
 import { ErrorState } from "@/components/common/error-state";
 import { StockBadge } from "@/components/common/status-badge";
+import { TableHeaderRow } from "@/components/common/table-header-row";
 import { ProductFormDialog } from "@/components/products/product-form-dialog";
 import { StockMovementDialog } from "@/components/products/stock-movement-dialog";
 import { getApiErrorMessage } from "@/lib/api";
@@ -57,17 +56,17 @@ export function ProductTable({ products, isLoading, isError, onRetry, isAdmin }:
   return (
     <div className="overflow-hidden rounded-xl bg-card shadow-sm shadow-foreground/5 ring-1 ring-foreground/[0.06]">
       <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead className="w-1"></TableHead>
-            <TableHead>SKU</TableHead>
-            <TableHead>Nombre</TableHead>
-            <TableHead>Categoría</TableHead>
-            <TableHead className="text-right">Precio</TableHead>
-            <TableHead className="text-right">Stock</TableHead>
-            <TableHead className="w-1 text-right">Acciones</TableHead>
-          </TableRow>
-        </TableHeader>
+        <TableHeaderRow
+          columns={[
+            { label: "", className: "w-1" },
+            { label: "SKU" },
+            { label: "Nombre" },
+            { label: "Categoría" },
+            { label: "Precio", className: "text-right" },
+            { label: "Stock", className: "text-right" },
+            { label: "Acciones", className: "w-1 text-right" },
+          ]}
+        />
         <TableBody>
           {isLoading &&
             Array.from({ length: 6 }).map((_, i) => (

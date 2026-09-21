@@ -7,8 +7,6 @@ import {
   Table,
   TableBody,
   TableCell,
-  TableHead,
-  TableHeader,
   TableRow,
 } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -16,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { EmptyState } from "@/components/common/empty-state";
 import { ErrorState } from "@/components/common/error-state";
+import { TableHeaderRow } from "@/components/common/table-header-row";
 import { ClientFormDialog } from "@/components/clients/client-form-dialog";
 import { getApiErrorMessage } from "@/lib/api";
 import { useDeleteClient } from "@/lib/hooks/use-clients";
@@ -53,15 +52,15 @@ export function ClientTable({ clients, isLoading, isError, onRetry, isAdmin }: C
   return (
     <div className="overflow-hidden rounded-xl bg-card shadow-sm shadow-foreground/5 ring-1 ring-foreground/[0.06]">
       <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Nombre</TableHead>
-            <TableHead>NIT</TableHead>
-            <TableHead>Correo</TableHead>
-            <TableHead>Teléfono</TableHead>
-            <TableHead className="w-1 text-right">Acciones</TableHead>
-          </TableRow>
-        </TableHeader>
+        <TableHeaderRow
+          columns={[
+            { label: "Nombre" },
+            { label: "NIT" },
+            { label: "Correo" },
+            { label: "Teléfono" },
+            { label: "Acciones", className: "w-1 text-right" },
+          ]}
+        />
         <TableBody>
           {isLoading &&
             Array.from({ length: 6 }).map((_, i) => (

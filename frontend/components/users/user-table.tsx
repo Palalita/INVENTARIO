@@ -5,14 +5,13 @@ import {
   Table,
   TableBody,
   TableCell,
-  TableHead,
-  TableHeader,
   TableRow,
 } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/common/empty-state";
 import { ErrorState } from "@/components/common/error-state";
+import { TableHeaderRow } from "@/components/common/table-header-row";
 import { ActiveBadge, RoleBadge } from "@/components/common/status-badge";
 import { UserFormDialog } from "@/components/users/user-form-dialog";
 import type { User } from "@/lib/types";
@@ -37,15 +36,15 @@ export function UserTable({ users, isLoading, isError, onRetry, currentUserId }:
   return (
     <div className="overflow-hidden rounded-xl bg-card shadow-sm shadow-foreground/5 ring-1 ring-foreground/[0.06]">
       <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Nombre</TableHead>
-            <TableHead>Correo</TableHead>
-            <TableHead>Rol</TableHead>
-            <TableHead>Estado</TableHead>
-            <TableHead className="w-1 text-right">Acciones</TableHead>
-          </TableRow>
-        </TableHeader>
+        <TableHeaderRow
+          columns={[
+            { label: "Nombre" },
+            { label: "Correo" },
+            { label: "Rol" },
+            { label: "Estado" },
+            { label: "Acciones", className: "w-1 text-right" },
+          ]}
+        />
         <TableBody>
           {isLoading &&
             Array.from({ length: 5 }).map((_, i) => (

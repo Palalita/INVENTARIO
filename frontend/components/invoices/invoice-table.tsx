@@ -8,8 +8,6 @@ import {
   Table,
   TableBody,
   TableCell,
-  TableHead,
-  TableHeader,
   TableRow,
 } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -17,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/common/empty-state";
 import { ErrorState } from "@/components/common/error-state";
 import { InvoiceStatusBadge } from "@/components/common/status-badge";
+import { TableHeaderRow } from "@/components/common/table-header-row";
 import { formatCurrency } from "@/lib/invoice-calculations";
 import type { Invoice } from "@/lib/types";
 
@@ -37,16 +36,16 @@ export function InvoiceTable({ invoices, isLoading, isError, onRetry }: InvoiceT
   return (
     <div className="overflow-hidden rounded-xl bg-card shadow-sm shadow-foreground/5 ring-1 ring-foreground/[0.06]">
       <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>N°</TableHead>
-            <TableHead>Cliente</TableHead>
-            <TableHead>Fecha</TableHead>
-            <TableHead>Estado</TableHead>
-            <TableHead className="text-right">Total</TableHead>
-            <TableHead className="w-1 text-right">Acciones</TableHead>
-          </TableRow>
-        </TableHeader>
+        <TableHeaderRow
+          columns={[
+            { label: "N°" },
+            { label: "Cliente" },
+            { label: "Fecha" },
+            { label: "Estado" },
+            { label: "Total", className: "text-right" },
+            { label: "Acciones", className: "w-1 text-right" },
+          ]}
+        />
         <TableBody>
           {isLoading &&
             Array.from({ length: 6 }).map((_, i) => (
