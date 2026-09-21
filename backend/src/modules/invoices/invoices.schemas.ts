@@ -1,9 +1,10 @@
 import { z } from "zod";
 import { InvoiceStatus } from "@prisma/client";
+import { calendarDateSchema } from "../../utils/businessDate";
 
 export const listInvoicesQuerySchema = z.object({
-  from: z.string().optional(),
-  to: z.string().optional(),
+  from: calendarDateSchema.optional(),
+  to: calendarDateSchema.optional(),
   status: z.nativeEnum(InvoiceStatus).optional(),
   page: z.coerce.number().int().positive().default(1),
   pageSize: z.coerce.number().int().positive().max(100).default(20)

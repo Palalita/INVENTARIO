@@ -26,7 +26,10 @@ export function notFoundHandler(req: Request, res: Response) {
 // - ZodError (validación de esquema): 400 con el detalle de qué campo falló.
 // - Errores conocidos de Prisma: P2002 (violación de unicidad, ej. SKU
 //   duplicado) se traduce a 409; P2025 (registro no encontrado al
-//   actualizar/borrar) a 404.
+//   actualizar/borrar) a 404; P2003 (violación de llave foránea, ej. borrar
+//   un cliente que tiene facturas) a 409; P2034 (conflicto de escritura en
+//   una transacción serializable — ver el chequeo de "último admin" en
+//   users.service.ts) a 409, pidiendo reintentar.
 // - Cualquier otro error no anticipado: 500 genérico, pero sí se loguea
 //   completo para poder investigarlo después.
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -65,6 +68,24 @@ export function errorHandler(err: unknown, req: Request, res: Response, _next: N
     }
     if (err.code === "P2025") {
       res.status(404).json({ error: { code: "NOT_FOUND", message: "Recurso no encontrado." } });
+      return;
+    }
+    if (err.code === "P2003") {
+      res.status(409).json({
+        error: {
+          code: "FOREIGN_KEY_CONSTRAINT",
+          message: "No se puede eliminar: tiene registros relacionados."
+        }
+      });
+      return;
+    }
+    if (err.code === "P2034") {
+      res.status(409).json({
+        error: {
+          code: "WRITE_CONFLICT",
+          message: "Otra operación modificó el mismo registro al mismo tiempo. Intenta de nuevo."
+        }
+      });
       return;
     }
   }

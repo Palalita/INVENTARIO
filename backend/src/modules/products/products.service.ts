@@ -78,6 +78,16 @@ export async function listProducts(query: ListProductsQuery) {
   if (query.lowStock) {
     // stock <= minStock: no se puede comparar dos columnas directamente con el
     // filtro de Prisma, se resuelve con una raw query de soporte.
+    //
+    // A propósito SIN LIMIT (a diferencia de la consulta gemela en
+    // dashboard.service.ts, que sí tiene LIMIT 100): ahí el resultado se
+    // muestra directo sin paginar más, así que "los primeros 100" es
+    // correcto. Aquí esta lista de ids solo arma el filtro `where.id` para
+    // el `findMany` paginado de abajo — cortarla a 100 dejaría páginas 2+
+    // silenciosamente incompletas en un catálogo con más de 100 productos
+    // en stock bajo. Es un trade-off de performance (trae todos los ids a
+    // memoria) por corrección de la paginación; al tamaño actual del
+    // catálogo no es un problema real.
     const lowStockIds = await prisma.$queryRaw<Array<{ id: string }>>`
       SELECT id FROM "Product" WHERE stock <= "minStock"
     `;

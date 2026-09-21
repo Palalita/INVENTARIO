@@ -61,6 +61,14 @@ const userSafeSelect = {
   createdAt: true
 } as const;
 
+// Hash bcrypt "de mentira" (de una contraseña que nadie usa) contra el que
+// comparar cuando el email no existe o el usuario está inactivo. Sin esto,
+// ese camino responde de inmediato mientras que un email real con password
+// incorrecta espera los ~60-100ms de bcrypt.compare() — esa diferencia de
+// tiempo deja adivinar qué emails existen en el sistema, aun sin ver nunca
+// el mensaje de error (que ya es genérico a propósito).
+const DUMMY_PASSWORD_HASH = "$2b$12$adx9jrS88/CpSzwOzKtbVuZESHEGio5o4TFo7H6cTh.2VbEj1tpPi";
+
 // Verifica email+contraseña, y si son correctos emite un access token nuevo
 // y crea un refresh token nuevo en la base de datos. Rechaza tanto
 // credenciales incorrectas como usuarios desactivados (`active: false`) con
@@ -69,11 +77,14 @@ const userSafeSelect = {
 export async function login(input: LoginInput) {
   const user = await prisma.user.findUnique({ where: { email: input.email } });
 
+  // bcrypt.compare() corre siempre, exista o no el usuario, para que ambos
+  // caminos tarden lo mismo (ver DUMMY_PASSWORD_HASH arriba).
+  const passwordMatches = await bcrypt.compare(input.password, user?.passwordHash ?? DUMMY_PASSWORD_HASH);
+
   if (!user || !user.active) {
     throw AppError.unauthorized("Credenciales inválidas", "INVALID_CREDENTIALS");
   }
 
-  const passwordMatches = await bcrypt.compare(input.password, user.passwordHash);
   if (!passwordMatches) {
     throw AppError.unauthorized("Credenciales inválidas", "INVALID_CREDENTIALS");
   }
@@ -113,7 +124,26 @@ export async function refresh(rawToken: string | undefined) {
     include: { user: true }
   });
 
-  if (!existing || existing.revoked || existing.expiresAt < new Date() || !existing.user.active) {
+  if (!existing) {
+    throw AppError.unauthorized("Refresh token inválido o expirado", "INVALID_REFRESH_TOKEN");
+  }
+
+  // Un token que YA estaba revocado volviendo a presentarse no es un simple
+  // "vencido": es la señal de que alguien más lo usó primero (el dueño ya lo
+  // rotó, o se lo robaron y el ladrón llegó antes). Antes solo se rechazaba
+  // esta request puntual, dejando viva la sesión que sí logró rotarlo — si
+  // fue un robo, el atacante se queda con acceso hasta que su token expire
+  // solo. Ahora se trata como compromiso de cuenta: se revocan TODOS los
+  // refresh tokens activos del usuario, forzando re-login en todos lados.
+  if (existing.revoked) {
+    await prisma.refreshToken.updateMany({
+      where: { userId: existing.userId, revoked: false },
+      data: { revoked: true }
+    });
+    throw AppError.unauthorized("Refresh token inválido o expirado", "INVALID_REFRESH_TOKEN");
+  }
+
+  if (existing.expiresAt < new Date() || !existing.user.active) {
     throw AppError.unauthorized("Refresh token inválido o expirado", "INVALID_REFRESH_TOKEN");
   }
 

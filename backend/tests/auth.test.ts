@@ -71,6 +71,38 @@ describe("Auth", () => {
     expect(res.body.user.email).toBe(admin.email);
   });
 
+  it("reusar un refresh token ya rotado revoca TODA la sesión, no solo ese intento", async () => {
+    function extractRefreshCookie(res: request.Response): string {
+      const setCookie = res.headers["set-cookie"];
+      const cookies = Array.isArray(setCookie) ? setCookie : [String(setCookie)];
+      const match = cookies.map((c) => c.match(/refreshToken=([^;]+)/)).find(Boolean);
+      if (!match) throw new Error("No se encontró la cookie refreshToken en la respuesta");
+      return `refreshToken=${match[1]}`;
+    }
+
+    const admin = await createAdmin({ email: "admin-reuse@test.local" });
+    const loginRes = await request(app)
+      .post("/api/v1/auth/login")
+      .send({ email: admin.email, password: DEFAULT_PASSWORD });
+    const cookieA = extractRefreshCookie(loginRes);
+
+    // Rotación normal: A queda revocado, se emite B.
+    const refreshRes = await request(app).post("/api/v1/auth/refresh").set("Cookie", cookieA);
+    expect(refreshRes.status).toBe(200);
+    const cookieB = extractRefreshCookie(refreshRes);
+
+    // Alguien reusa A (robado, o el dueño legítimo con una pestaña vieja).
+    // Debe rechazarse...
+    const reuseRes = await request(app).post("/api/v1/auth/refresh").set("Cookie", cookieA);
+    expect(reuseRes.status).toBe(401);
+
+    // ...y además, ese reuso debe haber matado también a B: la sesión que sí
+    // ganó la rotación no debería seguir viva, porque un reuso detectado es
+    // señal de que la sesión completa pudo estar comprometida.
+    const bRes = await request(app).post("/api/v1/auth/refresh").set("Cookie", cookieB);
+    expect(bRes.status).toBe(401);
+  });
+
   it("rutas protegidas rechazan peticiones sin token", async () => {
     const resProducts = await request(app).get("/api/v1/products");
     const resClients = await request(app).get("/api/v1/clients");

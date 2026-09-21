@@ -8,6 +8,7 @@ import { prisma } from "../../config/prisma";
 import { env } from "../../config/env";
 import { AppError } from "../../utils/AppError";
 import { getPaginationArgs, buildPaginatedResponse } from "../../utils/pagination";
+import { startOfBusinessLocalDay } from "../../utils/businessDate";
 import { CreateInvoiceInput, ListInvoicesQuery } from "./invoices.schemas";
 
 // Relaciones que casi siempre hacen falta al devolver una factura completa:
@@ -41,8 +42,12 @@ export async function listInvoices(query: ListInvoicesQuery, requester: Requesti
 
   if (query.from || query.to) {
     where.createdAt = {};
-    if (query.from) where.createdAt.gte = new Date(query.from);
-    if (query.to) where.createdAt.lte = new Date(query.to);
+    // Igual que dashboard.service.ts: "from"/"to" son fechas de calendario
+    // en hora de Guatemala, no UTC, y "to" es un límite exclusivo al día
+    // siguiente para incluir el día completo (evita cortar ventas de la
+    // tarde/noche que new Date(query.to) con .lte hubiera excluido).
+    if (query.from) where.createdAt.gte = startOfBusinessLocalDay(query.from);
+    if (query.to) where.createdAt.lt = startOfBusinessLocalDay(query.to, 1);
   }
 
   // Un vendedor solo ve sus propias ventas (PRD 3: "Ver dashboard/reportes: Ventas propias").

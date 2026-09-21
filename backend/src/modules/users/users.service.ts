@@ -1,7 +1,7 @@
 // Gestión de usuarios/trabajadores del sistema (solo accesible por ADMIN,
 // ver users.routes.ts). No incluye login — eso vive en el módulo auth.
 import bcrypt from "bcrypt";
-import { Role } from "@prisma/client";
+import { Prisma, Role } from "@prisma/client";
 import { prisma } from "../../config/prisma";
 import { AppError } from "../../utils/AppError";
 import { getPaginationArgs, buildPaginatedResponse } from "../../utils/pagination";
@@ -54,33 +54,45 @@ export async function createUser(input: CreateUserInput) {
 // desactivarlo). No permite cambiar contraseña por esta vía — eso sería otro
 // endpoint/flujo, no cubierto por UpdateUserInput.
 export async function updateUser(id: string, input: UpdateUserInput) {
-  const existing = await prisma.user.findUnique({ where: { id } });
-  if (!existing) {
-    throw AppError.notFound("Usuario no encontrado");
-  }
+  // El chequeo de "último admin" (contar cuántos quedan) y el update en sí
+  // corren dentro de una transacción SERIALIZABLE: sin esto, dos PATCH
+  // concurrentes degradando/desactivando a los dos únicos admins activos
+  // podrían cada uno leer "todavía queda 1 admin más" (contando al otro,
+  // que aún no terminó su propia escritura) y dejar el sistema sin ningún
+  // admin. Bajo aislamiento serializable, Postgres detecta ese conflicto de
+  // lectura/escritura solapado y aborta una de las dos transacciones con
+  // P2034 (ver errorHandler.ts) en vez de dejar pasar ambas.
+  return prisma.$transaction(
+    async (tx) => {
+      const existing = await tx.user.findUnique({ where: { id } });
+      if (!existing) {
+        throw AppError.notFound("Usuario no encontrado");
+      }
 
-  // Si este cambio desactivaría o le quitaría el rol ADMIN al único admin
-  // activo que queda, el sistema entero se quedaría sin nadie que pueda
-  // gestionar usuarios, productos o anular facturas — sin ruta de
-  // recuperación salvo entrar directo a la base de datos. Se bloquea antes
-  // de escribir nada.
-  const losesAdminAccess =
-    existing.role === Role.ADMIN &&
-    existing.active &&
-    (input.active === false || (input.role !== undefined && input.role !== Role.ADMIN));
+      // Si este cambio desactivaría o le quitaría el rol ADMIN al único
+      // admin activo que queda, el sistema entero se quedaría sin nadie que
+      // pueda gestionar usuarios, productos o anular facturas — sin ruta de
+      // recuperación salvo entrar directo a la base de datos. Se bloquea
+      // antes de escribir nada.
+      const losesAdminAccess =
+        existing.role === Role.ADMIN &&
+        existing.active &&
+        (input.active === false || (input.role !== undefined && input.role !== Role.ADMIN));
 
-  if (losesAdminAccess) {
-    const otherActiveAdmins = await prisma.user.count({
-      where: { role: Role.ADMIN, active: true, id: { not: id } }
-    });
-    if (otherActiveAdmins === 0) {
-      throw AppError.conflict(
-        "No se puede desactivar ni quitarle el rol de administrador al único admin activo",
-        "LAST_ADMIN"
-      );
-    }
-  }
+      if (losesAdminAccess) {
+        const otherActiveAdmins = await tx.user.count({
+          where: { role: Role.ADMIN, active: true, id: { not: id } }
+        });
+        if (otherActiveAdmins === 0) {
+          throw AppError.conflict(
+            "No se puede desactivar ni quitarle el rol de administrador al único admin activo",
+            "LAST_ADMIN"
+          );
+        }
+      }
 
-  const user = await prisma.user.update({ where: { id }, data: input, select: userSafeSelect });
-  return user;
+      return tx.user.update({ where: { id }, data: input, select: userSafeSelect });
+    },
+    { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }
+  );
 }
