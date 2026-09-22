@@ -14,12 +14,37 @@ const nextConfig: NextConfig = {
   // malicioso (clickjacking/UI-redress — ej. superponer una capa
   // transparente sobre "Anular factura" para engañar a un admin logueado).
   async headers() {
+    // Además de frame-ancestors (clickjacking), se restringen script-src/
+    // object-src/base-uri como defensa en profundidad: hoy no hay ningún
+    // XSS conocido en el código (sin dangerouslySetInnerHTML/eval/innerHTML
+    // en todo el frontend), pero si alguna vez apareciera uno, esta política
+    // limita qué puede hacer un script inyectado. 'unsafe-inline' en
+    // script-src es necesario porque Next.js App Router inyecta scripts
+    // inline pequeños para hidratar/bootstrapear la página — sin esto la
+    // app no carga en absoluto. connect-src incluye el backend de Railway
+    // (las llamadas a la API no pasan por next.config, van directo desde
+    // el navegador).
+    const backendOrigin = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000/api/v1").replace(
+      /\/api\/v1\/?$/,
+      ""
+    );
+    const csp = [
+      "default-src 'self'",
+      "script-src 'self' 'unsafe-inline'",
+      "style-src 'self' 'unsafe-inline'",
+      "img-src 'self' data: https:",
+      `connect-src 'self' ${backendOrigin}`,
+      "object-src 'none'",
+      "base-uri 'none'",
+      "frame-ancestors 'none'"
+    ].join("; ");
+
     return [
       {
         source: "/:path*",
         headers: [
           { key: "X-Frame-Options", value: "DENY" },
-          { key: "Content-Security-Policy", value: "frame-ancestors 'none'" },
+          { key: "Content-Security-Policy", value: csp },
           { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
           { key: "X-Content-Type-Options", value: "nosniff" },
         ],

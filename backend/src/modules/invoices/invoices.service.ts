@@ -217,7 +217,24 @@ export async function cancelInvoice(id: string, cancelledByUserId: string) {
     if (!invoice) {
       throw AppError.notFound("Factura no encontrada");
     }
-    if (invoice.status === InvoiceStatus.ANULADA) {
+
+    // Reclama la transición EMITIDA -> ANULADA de forma atómica ANTES de
+    // tocar el stock, en vez de solo comprobar `invoice.status` en código y
+    // escribir después. Sin esto, dos PATCH .../cancel casi simultáneas
+    // sobre la misma factura (dos pestañas de admin, doble clic en una
+    // conexión lenta) podían ambas leer "todavía EMITIDA" antes de que la
+    // primera confirmara, y ambas reponer el stock y crear su propio
+    // StockMovement de reversa — duplicando el incremento sin que ninguna
+    // de las dos request viera un error. Mismo patrón CAS que ya usa
+    // createInvoice() para el stock, y refresh() para la rotación de
+    // tokens (auth.service.ts): si `count` da 0, alguien más ya ganó esta
+    // carrera.
+    const claim = await tx.invoice.updateMany({
+      where: { id, status: { not: InvoiceStatus.ANULADA } },
+      data: { status: InvoiceStatus.ANULADA, cancelledAt: new Date(), cancelledByUserId }
+    });
+
+    if (claim.count === 0) {
       throw AppError.conflict("La factura ya se encuentra anulada", "INVOICE_ALREADY_CANCELLED");
     }
 
@@ -236,10 +253,6 @@ export async function cancelInvoice(id: string, cancelledByUserId: string) {
       });
     }
 
-    return tx.invoice.update({
-      where: { id },
-      data: { status: InvoiceStatus.ANULADA, cancelledAt: new Date(), cancelledByUserId },
-      include: invoiceInclude
-    });
+    return tx.invoice.findUniqueOrThrow({ where: { id }, include: invoiceInclude });
   });
 }

@@ -116,6 +116,43 @@ describe("Invoices", () => {
     expect(entradaMovement?.userId).toBe(adminId);
   });
 
+  it("dos anulaciones concurrentes de la misma factura no duplican la reposición de stock", async () => {
+    const product = await createProduct({ price: 10, stock: 20, minStock: 2 });
+    const client = await createClient();
+
+    const createRes = await request(app)
+      .post("/api/v1/invoices")
+      .set("Authorization", `Bearer ${vendedorToken}`)
+      .send({ clientId: client.id, items: [{ productId: product.id, quantity: 4 }] });
+    const invoiceId = createRes.body.invoice.id;
+
+    const afterCreate = await prisma.product.findUniqueOrThrow({ where: { id: product.id } });
+    expect(afterCreate.stock).toBe(16);
+
+    // Dos PATCH .../cancel "simultáneas" sobre la misma factura — el
+    // escenario real es doble clic en una conexión lenta, dos pestañas de
+    // admin, o un intento deliberado de inflar el stock anulando la misma
+    // venta dos veces. Sin el CAS atómico, ambas podían leer "todavía
+    // EMITIDA" y ambas reponer el stock.
+    const [resA, resB] = await Promise.all([
+      request(app).patch(`/api/v1/invoices/${invoiceId}/cancel`).set("Authorization", `Bearer ${adminToken}`),
+      request(app).patch(`/api/v1/invoices/${invoiceId}/cancel`).set("Authorization", `Bearer ${adminToken}`)
+    ]);
+
+    const statuses = [resA.status, resB.status].sort();
+    // Exactamente una debe ganar (200) y la otra debe perder (409) — nunca
+    // las dos con 200.
+    expect(statuses).toEqual([200, 409]);
+
+    const afterCancel = await prisma.product.findUniqueOrThrow({ where: { id: product.id } });
+    expect(afterCancel.stock).toBe(20); // repuesto una sola vez, no 24
+
+    const entradaMovements = await prisma.stockMovement.count({
+      where: { productId: product.id, type: MovementType.ENTRADA }
+    });
+    expect(entradaMovements).toBe(1);
+  });
+
   it("un vendedor no puede anular una factura (403)", async () => {
     const product = await createProduct({ price: 10, stock: 20, minStock: 2 });
     const client = await createClient();
