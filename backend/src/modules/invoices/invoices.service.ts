@@ -175,20 +175,25 @@ export async function createInvoice(userId: string, input: CreateInvoiceInput) {
     // factura en el campo `reason`.
     //
     // El decremento usa updateMany con el stock mínimo requerido en el
-    // `where`, no un update plano: la validación de arriba lee el stock una
-    // vez y puede quedar obsoleta si otra venta concurrente del mismo
-    // producto se cuela entre esa lectura y este punto (dos vendedores
-    // vendiendo las últimas unidades al mismo tiempo). `updateMany` con esa
-    // condición es atómico a nivel de fila en Postgres — si el `count`
-    // vuelve en 0, alguien más ganó la carrera y hay que fallar aquí en vez
-    // de dejar el stock en negativo.
+    // `where`, no un update plano: la validación de arriba lee el stock (y
+    // el `active`) una vez y puede quedar obsoleta si algo cambia entre esa
+    // lectura y este punto — otra venta concurrente del mismo producto (dos
+    // vendedores vendiendo las últimas unidades al mismo tiempo), o un ADMIN
+    // desactivando el producto en ese instante. `updateMany` con `active:
+    // true` y el stock mínimo requerido en el `where` es atómico a nivel de
+    // fila en Postgres — si el `count` vuelve en 0, algo cambió y hay que
+    // fallar aquí en vez de dejar el stock en negativo o vender un producto
+    // recién discontinuado.
     for (const [productId, requested] of quantitiesByProduct.entries()) {
       const result = await tx.product.updateMany({
-        where: { id: productId, stock: { gte: requested } },
+        where: { id: productId, active: true, stock: { gte: requested } },
         data: { stock: { decrement: requested } }
       });
       if (result.count === 0) {
         const current = await tx.product.findUnique({ where: { id: productId } });
+        if (!current?.active) {
+          throw AppError.badRequest(`Producto(s) no encontrado(s): ${productId}`, "PRODUCT_NOT_FOUND");
+        }
         throw AppError.conflict("Stock insuficiente para uno o más productos", "INSUFFICIENT_STOCK", [
           { productId, available: current?.stock ?? 0, requested }
         ]);

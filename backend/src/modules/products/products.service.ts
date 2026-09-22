@@ -59,6 +59,10 @@ function keyFromImageUrl(imageUrl: string): string {
 // categoría, y filtro de "solo stock bajo" (stock <= minStock). Incluye la
 // categoría relacionada en cada producto para no obligar al frontend a
 // hacer una segunda consulta.
+//
+// Nota: esta consulta no oculta `cost` (costo de compra) para VENDEDOR —
+// es intencional, confirmado con el dueño del negocio: cualquier usuario
+// autenticado puede ver el costo/margen de un producto, no solo ADMIN.
 export async function listProducts(query: ListProductsQuery) {
   const { skip, take, page, pageSize } = getPaginationArgs(query);
 
@@ -140,10 +144,11 @@ export async function createProduct(input: CreateProductInput) {
 
 // Actualiza campos de un producto existente. Si viene un SKU nuevo distinto
 // al actual, revalida que no choque con el de otro producto (igual que en
-// createProduct). El esquema permite mandar `stock` aquí también, pero el
-// flujo pensado para cambiar existencias es el módulo stock-movements (que
-// además deja un registro auditable de cada ajuste) — el frontend solo
-// permite editar el stock desde ahí, no desde este formulario.
+// createProduct). `stock` NO forma parte de UpdateProductInput (a
+// diferencia de CreateProductInput, que sí lo acepta como saldo inicial):
+// el único camino para cambiar existencias de un producto ya creado es el
+// módulo stock-movements, que además deja un registro auditable de cada
+// ajuste (ver el comentario de updateProductSchema para el detalle).
 export async function updateProduct(id: string, input: UpdateProductInput) {
   const existing = await prisma.product.findUnique({ where: { id } });
   if (!existing) {

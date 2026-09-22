@@ -6,6 +6,7 @@
 import PDFDocument from "pdfkit";
 import { Response } from "express";
 import { Prisma } from "@prisma/client";
+import { formatBusinessDateTime } from "../../utils/businessDate";
 
 // Mismo formato que formatCurrency() del frontend (lib/invoice-calculations.ts):
 // símbolo de moneda de Guatemala y separador de miles, en vez de un número
@@ -72,7 +73,10 @@ export function streamInvoicePdf(invoice: InvoiceForPdf, res: Response): void {
   doc.fontSize(20).text("Factura", { align: "right" });
   doc.fontSize(10).text(`N° ${invoice.number}`, { align: "right" });
   doc.text(`Estado: ${invoice.status}`, { align: "right" });
-  doc.text(`Fecha: ${invoice.createdAt.toISOString()}`, { align: "right" });
+  // Hora de Guatemala, no UTC crudo: Railway corre en UTC, así que una venta
+  // después de las 6pm hora local (UTC-6) mostraría la fecha del día
+  // siguiente en este documento fiscal si se usara toISOString() aquí.
+  doc.text(`Fecha: ${formatBusinessDateTime(invoice.createdAt)}`, { align: "right" });
   doc.moveDown();
 
   doc.fontSize(12).text("Cliente:");

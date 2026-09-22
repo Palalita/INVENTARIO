@@ -3,7 +3,12 @@
 // Todo de solo lectura — este módulo nunca modifica datos, solo los agrega.
 import { InvoiceStatus, Prisma, Role } from "@prisma/client";
 import { prisma } from "../../config/prisma";
-import { startOfBusinessToday, startOfBusinessMonth, startOfBusinessLocalDay } from "../../utils/businessDate";
+import {
+  startOfBusinessToday,
+  startOfBusinessMonth,
+  startOfBusinessLocalDay,
+  formatBusinessDateTime
+} from "../../utils/businessDate";
 import { SalesReportQuery } from "./dashboard.schemas";
 
 interface RequestingUser {
@@ -169,7 +174,11 @@ export function toCsv(rows: Array<Record<string, unknown>>): string {
       headers
         .map((h) => {
           const value = row[h];
-          const str = value instanceof Date ? value.toISOString() : sanitizeCsvCell(String(value));
+          // Hora de Guatemala, no toISOString() (UTC): el reporte ya filtra
+          // por día de negocio en Guatemala (startOfBusinessLocalDay), así
+          // que imprimir la fecha en UTC podía mostrar un día de calendario
+          // distinto al que efectivamente se filtró.
+          const str = value instanceof Date ? formatBusinessDateTime(value) : sanitizeCsvCell(String(value));
           return `"${str.replace(/"/g, '""')}"`;
         })
         .join(",")

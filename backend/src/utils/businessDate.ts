@@ -43,3 +43,24 @@ export function startOfBusinessLocalDay(dateStr: string, addDays = 0): Date {
 export const calendarDateSchema = z
   .string()
   .regex(/^\d{4}-\d{2}-\d{2}$/, "Debe tener el formato YYYY-MM-DD");
+
+// Formatea un instante como fecha/hora de pared en Guatemala, para mostrarla
+// a un humano (PDF de factura, CSV de reporte de ventas) — a diferencia de
+// las funciones de arriba, que solo sirven para construir límites de
+// filtrado. Usa la zona IANA (Guatemala no observa horario de verano, así
+// que equivale al offset fijo usado arriba) en vez de aritmética manual
+// porque aquí sí hace falta el formato localizado (dd/mm/aaaa, 24h), no solo
+// el instante UTC correspondiente.
+const businessDateTimeFormatter = new Intl.DateTimeFormat("es-GT", {
+  timeZone: "America/Guatemala",
+  day: "2-digit",
+  month: "2-digit",
+  year: "numeric",
+  hour: "2-digit",
+  minute: "2-digit",
+  hour12: false
+});
+
+export function formatBusinessDateTime(date: Date): string {
+  return businessDateTimeFormatter.format(date);
+}
