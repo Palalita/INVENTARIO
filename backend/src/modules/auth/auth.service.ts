@@ -149,16 +149,45 @@ export async function refresh(rawToken: string | undefined) {
 
   const newRawToken = uuidv4();
 
-  await prisma.$transaction([
-    prisma.refreshToken.update({ where: { id: existing.id }, data: { revoked: true } }),
-    prisma.refreshToken.create({
+  // El `findFirst` de arriba pudo quedar obsoleto: si dos requests llegan
+  // con el mismo rawToken casi al mismo tiempo (el caso real es un atacante
+  // que ya robó el token, compitiendo contra el próximo refresh normal del
+  // dueño), ambas podían leer `revoked: false` y ambas rotar con éxito,
+  // generando dos sesiones hijas independientes sin que la detección de
+  // reuso de arriba se disparara nunca — anulando esa protección por
+  // completo. El `updateMany` de abajo es un compare-and-swap atómico
+  // (mismo patrón que createInvoice() usa para el stock en
+  // invoices.service.ts): solo UNA request concurrente puede ganarlo,
+  // porque Postgres re-evalúa `revoked: false` contra el estado ya
+  // confirmado, no contra la lectura de arriba.
+  const rotated = await prisma.$transaction(async (tx) => {
+    const claim = await tx.refreshToken.updateMany({
+      where: { id: existing.id, revoked: false },
+      data: { revoked: true }
+    });
+    if (claim.count === 0) return false;
+
+    await tx.refreshToken.create({
       data: {
         userId: existing.userId,
         tokenHash: hashRefreshToken(newRawToken),
         expiresAt: new Date(Date.now() + REFRESH_TOKEN_TTL_MS)
       }
-    })
-  ]);
+    });
+    return true;
+  });
+
+  if (!rotated) {
+    // Perdió la carrera: otra request ya consumió este token entre la
+    // lectura y este punto. Se trata igual que el reuso de un token ya
+    // revocado (rama de arriba): revocar toda la sesión del usuario, no
+    // dejar pasar en silencio.
+    await prisma.refreshToken.updateMany({
+      where: { userId: existing.userId, revoked: false },
+      data: { revoked: true }
+    });
+    throw AppError.unauthorized("Refresh token inválido o expirado", "INVALID_REFRESH_TOKEN");
+  }
 
   const accessToken = signAccessToken(existing.user);
 

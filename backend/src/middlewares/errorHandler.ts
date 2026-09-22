@@ -9,6 +9,30 @@ import { ZodError } from "zod";
 import { AppError } from "../utils/AppError";
 import { logger } from "../config/logger";
 
+// El mensaje es intencionalmente agnóstico a la operación: P2003 no solo
+// pasa al borrar (ej. un cliente con facturas), también puede pasar al
+// crear/actualizar algo que referencia un registro que otra request borró
+// justo antes (ej. un ADMIN borra un cliente en el instante en que un
+// VENDEDOR le está facturando). Un mensaje fijo tipo "no se puede eliminar"
+// sería confuso en ese segundo caso.
+function foreignKeyConflictBody() {
+  return {
+    error: {
+      code: "FOREIGN_KEY_CONSTRAINT",
+      message: "No se pudo completar la operación: hace referencia a un registro relacionado que ya no existe o está en uso."
+    }
+  };
+}
+
+function writeConflictBody() {
+  return {
+    error: {
+      code: "WRITE_CONFLICT",
+      message: "Otra operación modificó el mismo registro al mismo tiempo. Intenta de nuevo."
+    }
+  };
+}
+
 // Se monta al final de todas las rutas en app.ts: si ninguna ruta coincidió
 // con el método+path de la request, cae aquí y responde 404.
 export function notFoundHandler(req: Request, res: Response) {
@@ -26,10 +50,16 @@ export function notFoundHandler(req: Request, res: Response) {
 // - ZodError (validación de esquema): 400 con el detalle de qué campo falló.
 // - Errores conocidos de Prisma: P2002 (violación de unicidad, ej. SKU
 //   duplicado) se traduce a 409; P2025 (registro no encontrado al
-//   actualizar/borrar) a 404; P2003 (violación de llave foránea, ej. borrar
-//   un cliente que tiene facturas) a 409; P2034 (conflicto de escritura en
-//   una transacción serializable — ver el chequeo de "último admin" en
-//   users.service.ts) a 409, pidiendo reintentar.
+//   actualizar/borrar) a 404; P2003 (violación de llave foránea — puede
+//   pasar al borrar, pero también al crear/actualizar algo que referencia
+//   un registro que otra request borró justo antes) a 409; P2034 (conflicto
+//   de escritura en una transacción serializable — ver el chequeo de
+//   "último admin" en users.service.ts) a 409, pidiendo reintentar.
+// - Verificado en producción (Postgres de Railway) que Prisma no siempre
+//   logra clasificar estos tres como PrismaClientKnownRequestError — a veces
+//   llegan como PrismaClientUnknownRequestError con el mensaje crudo del
+//   motor. Por eso, además de manejar los códigos conocidos, hay un
+//   fallback que detecta el mismo caso por el texto del mensaje.
 // - Cualquier otro error no anticipado: 500 genérico, pero sí se loguea
 //   completo para poder investigarlo después.
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -71,42 +101,36 @@ export function errorHandler(err: unknown, req: Request, res: Response, _next: N
       return;
     }
     if (err.code === "P2003") {
-      res.status(409).json({
-        error: {
-          code: "FOREIGN_KEY_CONSTRAINT",
-          message: "No se puede eliminar: tiene registros relacionados."
-        }
-      });
+      res.status(409).json(foreignKeyConflictBody());
       return;
     }
     if (err.code === "P2034") {
-      res.status(409).json({
-        error: {
-          code: "WRITE_CONFLICT",
-          message: "Otra operación modificó el mismo registro al mismo tiempo. Intenta de nuevo."
-        }
-      });
+      res.status(409).json(writeConflictBody());
       return;
     }
   }
 
-  // Red de seguridad para P2003: verificado en producción (Postgres de
-  // Railway) que Prisma no siempre logra clasificar una violación de FK
-  // como PrismaClientKnownRequestError — a veces llega como
-  // PrismaClientUnknownRequestError, con el mensaje crudo del motor
-  // ("violates ... foreign key constraint") en vez de un `code` estructurado.
-  // Sin este chequeo por texto, ese caso se cae al 500 genérico de abajo.
-  if (
-    err instanceof Prisma.PrismaClientUnknownRequestError &&
-    /foreign key constraint/i.test(err.message)
-  ) {
-    res.status(409).json({
-      error: {
-        code: "FOREIGN_KEY_CONSTRAINT",
-        message: "No se puede eliminar: tiene registros relacionados."
-      }
-    });
-    return;
+  // Fallback por texto: red de seguridad para cuando Prisma no logra
+  // clasificar el error como PrismaClientKnownRequestError (verificado en
+  // producción con P2003 — llegó como PrismaClientUnknownRequestError, con
+  // el mensaje crudo del motor en vez de un `code` estructurado). Se cubren
+  // los mismos tres casos de arriba por si a esta instancia de Postgres le
+  // pasa lo mismo con unicidad o conflicto de transacción.
+  if (err instanceof Prisma.PrismaClientUnknownRequestError) {
+    if (/foreign key constraint/i.test(err.message)) {
+      res.status(409).json(foreignKeyConflictBody());
+      return;
+    }
+    if (/unique constraint/i.test(err.message)) {
+      res.status(409).json({
+        error: { code: "DUPLICATE_ENTRY", message: "El registro ya existe (violación de unicidad)." }
+      });
+      return;
+    }
+    if (/could not serialize access/i.test(err.message)) {
+      res.status(409).json(writeConflictBody());
+      return;
+    }
   }
 
   logger.error({ err, requestId }, "Error no controlado");

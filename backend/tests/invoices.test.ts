@@ -215,11 +215,13 @@ describe("Invoices", () => {
       .send({ clientId: client.id, items: [{ productId: product.id, quantity: 1 }] });
 
     // Factura hecha "ahora" (hora real del test) — se pide el listado
-    // filtrado por el día de hoy en el calendario UTC. Si el filtro
-    // estuviera mal (cortando a medianoche UTC en vez de medianoche
-    // Guatemala), una factura creada en la noche (hora GT) podría no
-    // aparecer al pedir "hoy" según el calendario UTC del servidor.
-    const today = new Date().toISOString().slice(0, 10);
+    // filtrado por el día de hoy en el calendario de GUATEMALA (no UTC):
+    // son días distintos varias horas al día (ahora mismo, por ejemplo,
+    // ~00:00-06:00 UTC ya es "mañana" en UTC pero sigue siendo "hoy" en
+    // Guatemala). Si se usara el día UTC aquí, el test sería flaky según la
+    // hora a la que corra — justo el bug que el fix real evita.
+    const GUATEMALA_UTC_OFFSET_MS = -6 * 60 * 60 * 1000;
+    const today = new Date(Date.now() + GUATEMALA_UTC_OFFSET_MS).toISOString().slice(0, 10);
     const res = await request(app)
       .get(`/api/v1/invoices?from=${today}&to=${today}`)
       .set("Authorization", `Bearer ${adminToken}`);

@@ -4,6 +4,14 @@ import { app } from "./helpers/app";
 import { resetDb, disconnectDb } from "./helpers/db";
 import { createAdmin, DEFAULT_PASSWORD } from "./helpers/factories";
 
+function extractRefreshCookie(res: request.Response): string {
+  const setCookie = res.headers["set-cookie"];
+  const cookies = Array.isArray(setCookie) ? setCookie : [String(setCookie)];
+  const match = cookies.map((c) => c.match(/refreshToken=([^;]+)/)).find(Boolean);
+  if (!match) throw new Error("No se encontró la cookie refreshToken en la respuesta");
+  return `refreshToken=${match[1]}`;
+}
+
 describe("Auth", () => {
   beforeEach(async () => {
     await resetDb();
@@ -72,14 +80,6 @@ describe("Auth", () => {
   });
 
   it("reusar un refresh token ya rotado revoca TODA la sesión, no solo ese intento", async () => {
-    function extractRefreshCookie(res: request.Response): string {
-      const setCookie = res.headers["set-cookie"];
-      const cookies = Array.isArray(setCookie) ? setCookie : [String(setCookie)];
-      const match = cookies.map((c) => c.match(/refreshToken=([^;]+)/)).find(Boolean);
-      if (!match) throw new Error("No se encontró la cookie refreshToken en la respuesta");
-      return `refreshToken=${match[1]}`;
-    }
-
     const admin = await createAdmin({ email: "admin-reuse@test.local" });
     const loginRes = await request(app)
       .post("/api/v1/auth/login")
@@ -101,6 +101,38 @@ describe("Auth", () => {
     // señal de que la sesión completa pudo estar comprometida.
     const bRes = await request(app).post("/api/v1/auth/refresh").set("Cookie", cookieB);
     expect(bRes.status).toBe(401);
+  });
+
+  it("dos refresh concurrentes con el mismo token: solo uno gana, y el otro no deja una segunda sesión viva", async () => {
+    const admin = await createAdmin({ email: "admin-race@test.local" });
+    const loginRes = await request(app)
+      .post("/api/v1/auth/login")
+      .send({ email: admin.email, password: DEFAULT_PASSWORD });
+    const cookieA = extractRefreshCookie(loginRes);
+
+    // Dos requests "simultáneas" con el MISMO token todavía válido — el
+    // escenario real es un atacante que ya robó el token compitiendo contra
+    // el próximo refresh normal del dueño. Sin el fix, ambas podían ganar y
+    // generar dos sesiones hijas independientes sin disparar nunca la
+    // detección de reuso.
+    const [resA, resB] = await Promise.all([
+      request(app).post("/api/v1/auth/refresh").set("Cookie", cookieA),
+      request(app).post("/api/v1/auth/refresh").set("Cookie", cookieA)
+    ]);
+
+    const statuses = [resA.status, resB.status].sort();
+    // Exactamente una debe ganar (200) y la otra debe perder (401) — nunca
+    // las dos con 200.
+    expect(statuses).toEqual([200, 401]);
+
+    const winner = resA.status === 200 ? resA : resB;
+    const winnerCookie = extractRefreshCookie(winner);
+
+    // La que perdió debió revocar TODA la sesión (mismo tratamiento que el
+    // reuso secuencial) — el token que sí ganó la carrera tampoco debe
+    // seguir sirviendo después.
+    const afterRaceRes = await request(app).post("/api/v1/auth/refresh").set("Cookie", winnerCookie);
+    expect(afterRaceRes.status).toBe(401);
   });
 
   it("rutas protegidas rechazan peticiones sin token", async () => {
