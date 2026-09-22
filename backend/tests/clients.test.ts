@@ -68,4 +68,25 @@ describe("Clients", () => {
     expect(csvRes.text).toContain(expectedEscapedCell);
     expect(csvRes.text).not.toMatch(/,"=/);
   });
+
+  it("no permite actualizar el NIT de un cliente al de otro cliente existente", async () => {
+    await request(app)
+      .post("/api/v1/clients")
+      .set("Authorization", `Bearer ${adminToken}`)
+      .send({ name: "Cliente A", nit: "1234567-8" });
+
+    const clientBRes = await request(app)
+      .post("/api/v1/clients")
+      .set("Authorization", `Bearer ${adminToken}`)
+      .send({ name: "Cliente B", nit: "9999999-9" });
+    const clientBId = clientBRes.body.client.id;
+
+    const updateRes = await request(app)
+      .patch(`/api/v1/clients/${clientBId}`)
+      .set("Authorization", `Bearer ${adminToken}`)
+      .send({ nit: "1234567-8" });
+
+    expect(updateRes.status).toBe(409);
+    expect(updateRes.body.error.code).toBe("DUPLICATE_NIT");
+  });
 });

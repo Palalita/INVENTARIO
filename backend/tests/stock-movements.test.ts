@@ -83,4 +83,16 @@ describe("Stock movements", () => {
     const unchanged = await prisma.product.findUniqueOrThrow({ where: { id: product.id } });
     expect(unchanged.stock).toBe(5);
   });
+
+  it("rechaza una cantidad absurdamente grande con 400 (no un overflow contra la base)", async () => {
+    const product = await createProduct({ stock: 10 });
+
+    const res = await request(app)
+      .post(`/api/v1/products/${product.id}/movements`)
+      .set("Authorization", `Bearer ${adminToken}`)
+      .send({ type: "ENTRADA", quantity: 999999999, reason: "conteo" });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe("VALIDATION_ERROR");
+  });
 });

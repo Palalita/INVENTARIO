@@ -79,12 +79,20 @@ export function createApp(): Express {
     res.status(200).json({ status: "ok", uptime: process.uptime() });
   });
 
-  // Rate limiting aplicado a toda la API (no al /health) para frenar abuso o
-  // fuerza bruta contra cualquier endpoint.
+  // /auth se monta ANTES del rate limiter general: sus tres rutas
+  // (login/refresh/logout) ya traen su propio limiter, con una clave que no
+  // depende de `req.ip` sin más (ver middlewares/rateLimit.ts) — se llaman
+  // a través del proxy de auth del frontend, que agrega un salto de proxy
+  // que `trust proxy: 1` no contempla, y aplicarles también el
+  // apiRateLimiter genérico (keyeado por `req.ip`) colapsaría el tráfico de
+  // auth de todo el negocio en un solo cupo compartido.
+  app.use("/api/v1/auth", authRoutes);
+
+  // Rate limiting aplicado al resto de la API (no a /health ni a /auth) para
+  // frenar abuso o fuerza bruta contra cualquier otro endpoint.
   app.use("/api/v1", apiRateLimiter);
 
   // Cada módulo de negocio monta sus propias rutas bajo su prefijo REST.
-  app.use("/api/v1/auth", authRoutes);
   app.use("/api/v1/users", usersRoutes);
   app.use("/api/v1/categories", categoriesRoutes);
   app.use("/api/v1/products", productsRoutes);

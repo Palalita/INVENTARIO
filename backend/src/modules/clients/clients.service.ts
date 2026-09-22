@@ -52,11 +52,23 @@ export async function createClient(input: CreateClientInput) {
   return prisma.client.create({ data: input });
 }
 
+// Si viene un NIT nuevo distinto al actual, revalida que no choque con el
+// de otro cliente (igual que createClient) — antes de este chequeo, ese
+// caso caía en el manejador genérico de P2002 (sigue siendo un 409, no un
+// 500, pero con un mensaje/código menos específico que DUPLICATE_NIT).
 export async function updateClient(id: string, input: UpdateClientInput) {
   const existing = await prisma.client.findUnique({ where: { id } });
   if (!existing) {
     throw AppError.notFound("Cliente no encontrado");
   }
+
+  if (input.nit && input.nit !== existing.nit) {
+    const nitTaken = await prisma.client.findUnique({ where: { nit: input.nit } });
+    if (nitTaken) {
+      throw AppError.conflict("Ya existe un cliente con ese NIT", "DUPLICATE_NIT");
+    }
+  }
+
   return prisma.client.update({ where: { id }, data: input });
 }
 

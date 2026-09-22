@@ -38,6 +38,22 @@ describe("Users (admin)", () => {
     expect(res.body.user.password).toBeUndefined();
   });
 
+  it("normaliza el email a minúsculas al crear, y permite iniciar sesión con otra combinación de mayúsculas", async () => {
+    const createRes = await request(app)
+      .post("/api/v1/users")
+      .set("Authorization", `Bearer ${adminToken}`)
+      .send({ name: "Con Mayúsculas", email: "  Nuevo.Vendedor@Test.Local  ", password: "Password123!", role: "VENDEDOR" });
+
+    expect(createRes.status).toBe(201);
+    expect(createRes.body.user.email).toBe("nuevo.vendedor@test.local");
+
+    const loginRes = await request(app)
+      .post("/api/v1/auth/login")
+      .send({ email: "NUEVO.VENDEDOR@TEST.LOCAL", password: "Password123!" });
+
+    expect(loginRes.status).toBe(200);
+  });
+
   it("un vendedor no puede crear usuarios (403)", async () => {
     const res = await request(app)
       .post("/api/v1/users")

@@ -15,7 +15,10 @@ export const listUsersQuerySchema = z.object({
 // admin tiene que elegir explícitamente crear a otro admin.
 export const createUserSchema = z.object({
   name: z.string().min(1, "El nombre es requerido"),
-  email: z.string().email("Email inválido"),
+  // trim + lowercase: la restricción @unique de email en Postgres es
+  // sensible a mayúsculas — sin normalizar aquí, "Admin@empresa.com" y
+  // "admin@empresa.com" pasarían como dos cuentas distintas.
+  email: z.string().trim().toLowerCase().email("Email inválido"),
   password: z.string().min(8, "La contraseña debe tener al menos 8 caracteres"),
   role: z.nativeEnum(Role).default(Role.VENDEDOR)
 });

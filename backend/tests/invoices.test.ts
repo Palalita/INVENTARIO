@@ -242,6 +242,19 @@ describe("Invoices", () => {
     expect(res.status).toBe(400);
   });
 
+  it("rechaza una cantidad absurdamente grande en una línea de factura con 400 (no un overflow contra la base)", async () => {
+    const product = await createProduct({ price: 10, stock: 20, minStock: 2 });
+    const client = await createClient();
+
+    const res = await request(app)
+      .post("/api/v1/invoices")
+      .set("Authorization", `Bearer ${adminToken}`)
+      .send({ clientId: client.id, items: [{ productId: product.id, quantity: 999999999 }] });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe("VALIDATION_ERROR");
+  });
+
   it("filtra por from/to incluyendo el día completo en hora de Guatemala", async () => {
     const product = await createProduct({ price: 10, stock: 20, minStock: 2 });
     const client = await createClient();
