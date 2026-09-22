@@ -25,8 +25,11 @@ const envSchema = z.object({
   NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
   DATABASE_URL: z.string().min(1, "DATABASE_URL es requerido"),
   FRONTEND_URL: z.string().default("http://localhost:3000"),
-  JWT_ACCESS_SECRET: z.string().min(1, "JWT_ACCESS_SECRET es requerido"),
-  REFRESH_TOKEN_SECRET: z.string().min(1, "REFRESH_TOKEN_SECRET es requerido"),
+  // min(32): estos dos secretos son la raíz de confianza de toda sesión de
+  // la app (firman los JWT de acceso y derivan el hash de los refresh
+  // tokens) — un valor corto o trivial los haría forzables por fuerza bruta.
+  JWT_ACCESS_SECRET: z.string().min(32, "JWT_ACCESS_SECRET debe tener al menos 32 caracteres"),
+  REFRESH_TOKEN_SECRET: z.string().min(32, "REFRESH_TOKEN_SECRET debe tener al menos 32 caracteres"),
   ADMIN_SEED_PASSWORD: z.string().default("Admin123!"),
   TAX_RATE: z.coerce.number().nonnegative().default(0.12),
   // Imágenes de producto (Cloudflare R2, API S3-compatible). Opcionales: si
@@ -39,7 +42,15 @@ const envSchema = z.object({
   R2_PUBLIC_URL: z.string().optional()
 });
 
-const parsed = envSchema.safeParse(process.env);
+// Un mismo valor copiado en ambas variables dejaría un refresh token
+// robado (o su hash filtrado) utilizable también para forjar access tokens,
+// así que se rechaza aunque cada una individualmente cumpla el min(32).
+const envSchemaWithChecks = envSchema.refine(
+  (data) => data.JWT_ACCESS_SECRET !== data.REFRESH_TOKEN_SECRET,
+  { message: "JWT_ACCESS_SECRET y REFRESH_TOKEN_SECRET no pueden ser iguales", path: ["REFRESH_TOKEN_SECRET"] }
+);
+
+const parsed = envSchemaWithChecks.safeParse(process.env);
 
 if (!parsed.success) {
   // eslint-disable-next-line no-console

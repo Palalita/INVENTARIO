@@ -12,7 +12,6 @@
 import crypto from "crypto";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
-import { v4 as uuidv4 } from "uuid";
 import { prisma } from "../../config/prisma";
 import { env } from "../../config/env";
 import { AppError } from "../../utils/AppError";
@@ -90,7 +89,7 @@ export async function login(input: LoginInput) {
   }
 
   const accessToken = signAccessToken(user);
-  const rawRefreshToken = uuidv4();
+  const rawRefreshToken = crypto.randomUUID();
 
   await prisma.refreshToken.create({
     data: {
@@ -147,7 +146,7 @@ export async function refresh(rawToken: string | undefined) {
     throw AppError.unauthorized("Refresh token inválido o expirado", "INVALID_REFRESH_TOKEN");
   }
 
-  const newRawToken = uuidv4();
+  const newRawToken = crypto.randomUUID();
 
   // El `findFirst` de arriba pudo quedar obsoleto: si dos requests llegan
   // con el mismo rawToken casi al mismo tiempo (el caso real es un atacante
