@@ -4,6 +4,7 @@ import { app } from "./helpers/app";
 import { resetDb, disconnectDb } from "./helpers/db";
 import { createAdmin, createUser, loginAs } from "./helpers/factories";
 import { Role } from "@prisma/client";
+import { prisma } from "../src/config/prisma";
 
 describe("Products CRUD", () => {
   let adminToken: string;
@@ -97,6 +98,29 @@ describe("Products CRUD", () => {
       .set("Authorization", `Bearer ${adminToken}`);
     expect(afterDeleteRes.status).toBe(200);
     expect(afterDeleteRes.body.product.active).toBe(false);
+  });
+
+  it("PATCH /products/:id ignora `stock` aunque venga en el body (solo stock-movements puede cambiarlo)", async () => {
+    const createRes = await request(app)
+      .post("/api/v1/products")
+      .set("Authorization", `Bearer ${adminToken}`)
+      .send({ sku: "SKU-NOSTOCK", name: "Producto sin stock directo", price: 3, cost: 1, stock: 10, minStock: 1 });
+    const productId = createRes.body.product.id;
+
+    const patchRes = await request(app)
+      .patch(`/api/v1/products/${productId}`)
+      .set("Authorization", `Bearer ${adminToken}`)
+      .send({ name: "Renombrado", stock: 999 });
+
+    expect(patchRes.status).toBe(200);
+    expect(patchRes.body.product.name).toBe("Renombrado");
+    // El stock debe seguir en 10 (el valor de creación), no 999: `stock` no
+    // es un campo válido de updateProductSchema, así que Zod lo descarta
+    // silenciosamente en vez de aplicarlo.
+    expect(patchRes.body.product.stock).toBe(10);
+
+    const movementCount = await prisma.stockMovement.count({ where: { productId } });
+    expect(movementCount).toBe(0);
   });
 
   it("no permite SKU duplicado", async () => {

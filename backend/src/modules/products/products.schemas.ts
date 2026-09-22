@@ -28,6 +28,16 @@ export const createProductSchema = z.object({
   minStock: z.coerce.number().int().nonnegative().default(0)
 });
 
+// `stock` NO está aquí a propósito (a diferencia de createProductSchema, que
+// sí lo acepta como saldo inicial de un producto nuevo): stock-movements.ts
+// es "el único camino oficial para cambiar Product.stock con trazabilidad"
+// (ver su comentario de cabecera), y antes este PATCH permitía sobrescribir
+// el stock de un producto YA EXISTENTE como un valor absoluto, sin crear
+// ningún StockMovement ni usar el patrón atómico (increment/decrement
+// condicionado) que el resto del código usa religiosamente para tocar
+// stock. Eso rompía la trazabilidad auditable ("el número cambió pero no
+// hay ninguna fila que explique por qué") y, al ser una escritura absoluta
+// en vez de condicional, podía pisar una venta concurrente (lost update).
 export const updateProductSchema = z.object({
   sku: z.string().min(1).optional(),
   name: z.string().min(1).optional(),
@@ -35,7 +45,6 @@ export const updateProductSchema = z.object({
   categoryId: z.string().uuid().optional().nullable(),
   price: z.coerce.number().nonnegative().optional(),
   cost: z.coerce.number().nonnegative().optional(),
-  stock: z.coerce.number().int().nonnegative().optional(),
   minStock: z.coerce.number().int().nonnegative().optional(),
   active: z.boolean().optional()
 });

@@ -32,6 +32,22 @@ export const loginRateLimiter = rateLimit({
   // Desactivado en tests: los tests de integración inician sesión repetidas
   // veces por diseño y no deben verse afectados por el límite productivo.
   skip: () => isTest,
+  // Clave compuesta (IP + email), no solo IP: /auth/login se llama a través
+  // del proxy de auth del frontend (frontend/app/api/auth/_proxy.ts), así
+  // que req.ip para esta ruta refleja un salto extra (Vercel -> Railway)
+  // distinto al del resto de la API (navegador -> Railway directo). Aunque
+  // ese proxy ya reenvía la IP real del cliente, depender solo de que
+  // Express cuente los saltos de proxy exactamente bien es frágil — con
+  // clave compuesta, aun si `req.ip` terminara resolviendo igual para
+  // tráfico distinto, un atacante sin credenciales solo puede agotar el
+  // cupo del email específico que está probando, nunca el de todo el
+  // negocio a la vez (antes, 5 intentos compartidos entre absolutamente
+  // todos los usuarios significaban que cualquiera podía tumbar el login
+  // de todos con 5 requests anónimas).
+  keyGenerator: (req) => {
+    const email = typeof req.body?.email === "string" ? req.body.email.trim().toLowerCase() : "";
+    return `${req.ip}:${email}`;
+  },
   message: { error: { code: "TOO_MANY_REQUESTS", message: "Demasiados intentos de inicio de sesión. Intente de nuevo más tarde." } },
   handler: (_req, res) => {
     res.status(429).json({

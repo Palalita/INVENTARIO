@@ -20,11 +20,24 @@ export async function proxyAuthRequest(request: Request, backendPath: string) {
   const hasBody = contentLength !== null && contentLength !== "0";
   const body = hasBody ? await request.text() : undefined;
 
+  // Sin esto, el backend veía TODAS las llamadas de login/refresh/logout de
+  // TODO el negocio como si vinieran de una sola IP (la de salida del
+  // servidor de Vercel que hace este fetch), porque antes solo se
+  // reenviaba la cookie. El rate limiter de /auth/login (5 intentos/15min
+  // por IP) quedaba compartido entre todos los usuarios reales en vez de
+  // limitar por atacante — cualquiera podía tumbar el login de todo el
+  // negocio con 5 requests anónimas. Vercel ya puebla x-forwarded-for con
+  // la IP real del visitante en el borde de su red (no es un header que el
+  // cliente pueda spoofear libremente llegando a esta función), así que
+  // solo hace falta reenviarlo.
+  const clientIp = request.headers.get("x-forwarded-for") ?? request.headers.get("x-real-ip");
+
   const backendResponse = await fetch(`${BACKEND_URL}${backendPath}`, {
     method: request.method,
     headers: {
       "Content-Type": "application/json",
-      Cookie: cookie
+      Cookie: cookie,
+      ...(clientIp ? { "X-Forwarded-For": clientIp } : {})
     },
     body
   });
