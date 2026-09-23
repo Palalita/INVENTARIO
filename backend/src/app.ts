@@ -79,6 +79,16 @@ export function createApp(): Express {
     res.status(200).json({ status: "ok", uptime: process.uptime() });
   });
 
+  // Toda la API sirve datos autenticados (facturas, usuarios, reportes...)
+  // que un proxy/CDN intermedio no debería cachear nunca — el cliente ya
+  // los pide siempre por fetch/axios con header Authorization, nunca por una
+  // URL navegable, pero esto cierra el caso de un proxy corporativo
+  // guardando una respuesta con datos de facturación de todas formas.
+  app.use("/api/v1", (_req, res, next) => {
+    res.setHeader("Cache-Control", "no-store");
+    next();
+  });
+
   // /auth se monta ANTES del rate limiter general: sus tres rutas
   // (login/refresh/logout) ya traen su propio limiter, con una clave que no
   // depende de `req.ip` sin más (ver middlewares/rateLimit.ts) — se llaman

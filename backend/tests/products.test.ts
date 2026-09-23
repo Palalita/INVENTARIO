@@ -138,6 +138,22 @@ describe("Products CRUD", () => {
     expect(res.body.error.code).toBe("DUPLICATE_SKU");
   });
 
+  it("rechaza un precio fuera del rango de Decimal(12,2) con 400 (no un 500)", async () => {
+    const res = await request(app)
+      .post("/api/v1/products")
+      .set("Authorization", `Bearer ${adminToken}`)
+      .send({ sku: "SKU-OVERFLOW", name: "Producto F", price: 99999999999, cost: 1, stock: 1, minStock: 1 });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe("VALIDATION_ERROR");
+  });
+
+  it("responde con Cache-Control: no-store en la API", async () => {
+    const res = await request(app).get("/api/v1/products").set("Authorization", `Bearer ${adminToken}`);
+
+    expect(res.headers["cache-control"]).toBe("no-store");
+  });
+
   describe("Imagen de producto", () => {
     // Firma real de un PNG (8 bytes) seguida de datos cualquiera: suficiente
     // para pasar la validación de contenido sin ser un PNG decodificable de
